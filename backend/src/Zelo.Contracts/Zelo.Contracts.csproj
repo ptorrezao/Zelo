@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Zelo.SharedKernel\Zelo.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Hosts/Zelo.Api/Zelo.Api.csproj" />
+    <Project Path="src/Hosts/Zelo.MigrationRunner/Zelo.MigrationRunner.csproj" />
+    <Project Path="src/Hosts/Zelo.Worker/Zelo.Worker.csproj" />
+    <Project Path="src/Modules/Zelo.Modules.Auto/Zelo.Modules.Auto.csproj" />
+    <Project Path="src/Modules/Zelo.Modules.Core/Zelo.Modules.Core.csproj" />
+    <Project Path="src/Modules/Zelo.Modules.Identity/Zelo.Modules.Identity.csproj" />
+    <Project Path="src/Modules/Zelo.Modules.Inventory/Zelo.Modules.Inventory.csproj" />
+    <Project Path="src/Zelo.Contracts/Zelo.Contracts.csproj" />
+    <Project Path="src/Zelo.Messaging/Zelo.Messaging.csproj" />
+    <Project Path="src/Zelo.ServiceDefaults/Zelo.ServiceDefaults.csproj" />
+    <Project Path="src/Zelo.SharedKernel/Zelo.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Zelo.ArchitectureTests/Zelo.ArchitectureTests.csproj" />
+    <Project Path="tests/Zelo.IntegrationTests/Zelo.IntegrationTests.csproj" />
+    <Project Path="tests/Zelo.Modules.Auto.Tests/Zelo.Modules.Auto.Tests.csproj" />
+    <Project Path="tests/Zelo.Modules.Inventory.Tests/Zelo.Modules.Inventory.Tests.csproj" />
+  </Folder>
+</Solution>

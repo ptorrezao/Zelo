@@ -1,0 +1,24 @@
+name: frontend-auto
+
+on:
+  push:
+    paths:
+      - "frontend/apps/auto/**"
+      - "frontend/packages/**"
+      - ".github/workflows/frontend-auto.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm --filter @zelo/app-auto build
+        working-directory: frontend

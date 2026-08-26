@@ -1,0 +1,29 @@
+# Build unico, tres imagens finais.
+#   docker build -f infra/docker/Dockerfile.backend --target api       -t zelo-api .
+#   docker build -f infra/docker/Dockerfile.backend --target worker    -t zelo-worker .
+#   docker build -f infra/docker/Dockerfile.backend --target migrator  -t zelo-migrator .
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY backend/ .
+RUN dotnet restore Zelo.slnx
+RUN dotnet publish src/Hosts/Zelo.Api             -c Release -o /app/api      --no-restore
+RUN dotnet publish src/Hosts/Zelo.Worker          -c Release -o /app/worker   --no-restore
+RUN dotnet publish src/Hosts/Zelo.MigrationRunner -c Release -o /app/migrator --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS api
+WORKDIR /app
+COPY --from=build /app/api .
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "Zelo.Api.dll"]
+
+# runtime em vez de aspnet: o Worker nao serve HTTP, poupa ~20MB
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS worker
+WORKDIR /app
+COPY --from=build /app/worker .
+ENTRYPOINT ["dotnet", "Zelo.Worker.dll"]
+
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS migrator
+WORKDIR /app
+COPY --from=build /app/migrator .
+ENTRYPOINT ["dotnet", "Zelo.MigrationRunner.dll"]

@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { useVehicles } from '../composables/useVehicles'
 import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
-import '../styles/tokens.css'
-import '../styles/components.css'
-import '../styles/pages/index.css'
 
 const {
   visibleGroups,
@@ -55,11 +52,6 @@ const {
               <ZStat label="Renovação do seguro" :value="selected.insuranceRenewal" />
               <ZStat label="Próxima inspeção" :value="selected.nextInspection" />
             </ZStatGroup>
-
-            <div class="hero__plate">
-              <LicensePlate :value="selected.plate" />
-              <a class="hero__docs" href="#documentos">Documentos</a>
-            </div>
           </div>
           <VehiclePhoto :src="photo" :alt="fullName(selected)" />
         </div>

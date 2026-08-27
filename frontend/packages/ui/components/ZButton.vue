@@ -1,24 +1,33 @@
 <script setup lang="ts">
-import SButton from './shadcn/Button.vue'
-
-interface Props {
-  variant?: 'primary' | 'secondary'
-  size?: 'default' | 'sm' | 'lg'
-  disabled?: boolean
-}
-
-withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<{ variant?: 'primary' | 'secondary' }>(), {
   variant: 'secondary',
-  size: 'default',
 })
 </script>
 
 <template>
-  <SButton
-    :variant="variant === 'primary' ? 'default' : 'secondary'"
-    :size="size"
-    :disabled="disabled"
-  >
+  <button class="z-button" :class="`z-button--${variant}`">
     <slot />
-  </SButton>
+  </button>
 </template>
+
+<style scoped>
+.z-button {
+  padding: var(--z-space-2) var(--z-space-4);
+  border-radius: var(--z-radius);
+  border: var(--z-border);
+  font: inherit;
+  font-size: var(--z-font-size-sm);
+  cursor: pointer;
+}
+
+.z-button--primary {
+  background: var(--z-color-accent);
+  border-color: var(--z-color-accent);
+  color: var(--z-color-accent-text);
+}
+
+.z-button--secondary {
+  background: var(--z-color-bg);
+  color: var(--z-color-text);
+}
+</style>

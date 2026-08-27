@@ -1,0 +1,77 @@
+/* Fonte unica dos valores visuais. Nenhuma cor ou medida literal
+   deve aparecer fora deste ficheiro. */
+:root {
+  /* Superficies */
+  --z-color-page: #eef0f4;
+  --z-color-bg: #ffffff;
+  --z-color-surface: #f6f7f9;
+  --z-color-rail: #17181c;
+
+  /* Tinta */
+  --z-color-text: #1a1d21;
+  --z-color-text-muted: #5b6470;
+  --z-color-text-subtle: #8b93a1;
+  --z-color-rail-text: #8b8f98;
+  --z-color-rail-text-active: #ffffff;
+
+  --z-color-border: #d9dee5;
+  --z-color-border-subtle: #eceff3;
+
+  --z-color-accent: #2a78d6;
+  --z-color-accent-text: #ffffff;
+  --z-color-accent-wash: #eaf2fd;
+
+  /* Estado. Nunca usadas como cor de serie, e nunca sozinhas:
+     acompanham sempre um rotulo. */
+  --z-color-warning: #fab219;
+
+  /* Series de graficos. Ordem fixa, validada para daltonismo contra a
+     superficie branca (ver skill dataviz). Nao reordenar nem acrescentar
+     sem revalidar. */
+  --z-series-1: #2a78d6;
+  --z-series-2: #eb6834;
+  --z-series-3: #1baf7a;
+  --z-series-4: #eda100;
+  --z-series-1-soft: #86b6ef;
+
+  /* Tinta a usar sobre cada serie, escolhida pela luminancia do
+     preenchimento para o rotulo dentro do segmento nunca perder contraste. */
+  --z-series-1-ink: #ffffff;
+  --z-series-2-ink: #ffffff;
+  --z-series-3-ink: #ffffff;
+  --z-series-4-ink: #1a1d21;
+
+  --z-chart-grid: #e1e0d9;
+  --z-chart-baseline: #c3c2b7;
+
+  --z-space-1: 0.25rem;
+  --z-space-2: 0.5rem;
+  --z-space-3: 0.75rem;
+  --z-space-4: 1rem;
+  --z-space-6: 1.5rem;
+  --z-space-8: 2rem;
+
+  --z-radius: 6px;
+  --z-radius-lg: 12px;
+  --z-border: 1px solid var(--z-color-border);
+  --z-border-subtle: 1px solid var(--z-color-border-subtle);
+
+  --z-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --z-font-size-xs: 0.6875rem;
+  --z-font-size-sm: 0.875rem;
+  --z-font-size-base: 1rem;
+  --z-font-size-lg: 1.25rem;
+  --z-font-size-xl: 1.5rem;
+
+  /* Rotulos em maiusculas, usados como cabecalho de seccao */
+  --z-label-transform: uppercase;
+  --z-label-spacing: 0.06em;
+}
+
+body {
+  margin: 0;
+  background: var(--z-color-bg);
+  color: var(--z-color-text);
+  font-family: var(--z-font);
+  font-size: var(--z-font-size-base);
+}

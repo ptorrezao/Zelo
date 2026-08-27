@@ -102,21 +102,8 @@ const handleLogout = () => {
         </ol>
       </nav>
       <div class="flex-1 overflow-y-auto p-6">
-        <Transition name="page" mode="out-in">
-          <slot :key="route.path" />
-        </Transition>
+        <slot />
       </div>
     </SidebarInset>
   </SidebarProvider>
 </template>
-
-<style scoped>
-.page-enter-active,
-.page-leave-active {
-  transition: opacity 0.2s ease;
-}
-.page-enter-from,
-.page-leave-to {
-  opacity: 0;
-}
-</style>

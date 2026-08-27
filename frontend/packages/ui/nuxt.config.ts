@@ -1,6 +1,9 @@
 // Layer partilhado pelas apps. Cada app faz extends: ['@zelo/ui'],
 // o que lhe da os componentes por auto-import, o layout e os tokens.
 export default defineNuxtConfig({
+  alias: {
+    '@': '.',
+  },
   css: ['@zelo/config/tokens.css'],
 
   runtimeConfig: {

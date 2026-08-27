@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useVehicles } from '../composables/useVehicles'
 import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
+import Container from '@zelo/ui/components/shadcn/Container.vue'
+import Panel from '@zelo/ui/components/shadcn/Panel.vue'
 import SButton from '@zelo/ui/components/shadcn/Button.vue'
-import SCard from '@zelo/ui/components/shadcn/Card.vue'
 
 const {
   visibleGroups,
@@ -56,24 +57,20 @@ const {
     </aside>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <Container class="main-content">
       <!-- Header -->
-      <div class="header-section">
-        <PageHeader
-          :title="fullName(selected)"
-          :subtitle="`ID: ${selected.id}`"
-          :avatar-name="selected.driver"
-        />
-      </div>
+      <PageHeader
+        :title="fullName(selected)"
+        :subtitle="`ID: ${selected.id}`"
+        :avatar-name="selected.driver"
+      />
 
       <!-- Vehicle Details Grid -->
       <div class="content-grid">
         <!-- Left: Vehicle Info & Photo -->
         <div class="info-column">
-          <SCard class="vehicle-card">
-            <div class="card-header">
-              <h2>{{ fullName(selected) }}</h2>
-            </div>
+          <Panel class="vehicle-card">
+            <h2 class="vehicle-title">{{ fullName(selected) }}</h2>
 
             <div class="info-grid">
               <div class="info-item">
@@ -112,17 +109,16 @@ const {
             <div class="photo-container">
               <img v-if="photo" :src="photo" :alt="fullName(selected)" class="vehicle-photo" />
             </div>
-          </SCard>
+          </Panel>
         </div>
 
         <!-- Right: Maintenance & Stats -->
         <div class="stats-column">
           <!-- Maintenance -->
-          <SCard class="maintenance-card">
-            <div class="card-header">
-              <h3>Manutenção</h3>
+          <Panel title="Manutenção" class="maintenance-card">
+            <template #action>
               <SButton variant="default" size="sm">+ Adicionar</SButton>
-            </div>
+            </template>
 
             <div class="timeline">
               <div v-for="entry in selected.maintenances" :key="entry.date" class="timeline-item">
@@ -143,14 +139,10 @@ const {
                 </div>
               </div>
             </div>
-          </SCard>
+          </Panel>
 
           <!-- Statistics -->
-          <SCard class="stats-card">
-            <div class="card-header">
-              <h3>Estatísticas do carro</h3>
-            </div>
-
+          <Panel title="Estatísticas do carro" class="stats-card">
             <div class="stats-grid">
               <div class="stat">
                 <span class="label">Quilómetros (últimos 30 dias)</span>
@@ -176,30 +168,24 @@ const {
                 <div v-for="(km, idx) in selected.stats.monthlyKms" :key="idx" class="bar" :style="{ height: (km / 150) + '%' }"></div>
               </div>
             </div>
-          </SCard>
+          </Panel>
         </div>
       </div>
-    </main>
+    </Container>
   </div>
 </template>
 
 <style scoped>
 .auto-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
-  padding: 1.5rem;
-  background: #f5f5f5;
-  min-height: 100vh;
+  align-items: start;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .auto-layout {
     grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    order: -1;
   }
 }
 
@@ -219,6 +205,7 @@ const {
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
+  max-height: 60vh;
 }
 
 .sidebar-title {
@@ -304,13 +291,6 @@ const {
   color: #999;
 }
 
-.empty {
-  padding: 2rem 0;
-  text-align: center;
-  color: #999;
-  font-size: 0.9rem;
-}
-
 .sidebar-footer {
   padding: 1rem;
   border-top: 1px solid #eee;
@@ -327,13 +307,6 @@ const {
   gap: 1.5rem;
 }
 
-.header-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -347,31 +320,9 @@ const {
   }
 }
 
-/* Cards */
-.vehicle-card,
-.maintenance-card,
-.stats-card {
-  padding: 1.5rem;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #eee;
-}
-
-.card-header h2 {
-  margin: 0;
+.vehicle-title {
+  margin: 0 0 1rem 0;
   font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.card-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
   font-weight: 600;
 }
 
@@ -445,7 +396,7 @@ const {
   border-radius: 0.5rem;
 }
 
-/* Maintenance Timeline */
+/* Timeline */
 .timeline {
   display: flex;
   flex-direction: column;

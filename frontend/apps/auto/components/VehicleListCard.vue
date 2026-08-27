@@ -30,9 +30,10 @@ const markLogoError = (vehicleId: string) => {
     </CardHeader>
     <CardContent class="flex max-h-[60vh] flex-col gap-4 overflow-y-auto">
       <div v-for="group in visibleGroups" :key="group.label">
-        <button
+        <Button
           type="button"
-          class="mb-2 flex w-full items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          variant="ghost"
+          class="mb-2 h-auto w-full justify-between p-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-transparent hover:text-foreground"
           @click="toggleGroup(group.label)"
         >
           <span>{{ group.label }} </span>
@@ -45,15 +46,17 @@ const markLogoError = (vehicleId: string) => {
           >
             <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-        </button>
+        </Button>
         <div v-show="isOpen(group.label)" class="flex flex-col gap-2">
-          <button
+          <Button
             v-for="vehicle in group.items"
             :key="vehicle.id"
+            type="button"
+            variant="ghost"
             :class="[
-              'flex items-center gap-3 rounded-md border-2 p-3 text-left transition-colors',
+              'h-auto w-full items-center justify-start gap-3 rounded-md border-2 p-3 text-left font-normal',
               vehicle.id === selectedId
-                ? 'border-primary bg-primary/10'
+                ? 'border-primary bg-primary/10 hover:bg-primary/10'
                 : 'border-transparent bg-muted hover:bg-accent',
             ]"
             @click="selectedId = vehicle.id"
@@ -72,7 +75,7 @@ const markLogoError = (vehicleId: string) => {
               <span class="truncate text-sm font-medium">{{ fullName(vehicle) }}</span>
               <span class="text-xs text-muted-foreground">{{ vehicle.plate }}</span>
             </div>
-          </button>
+          </Button>
         </div>
       </div>
     </CardContent>

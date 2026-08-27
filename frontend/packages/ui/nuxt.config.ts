@@ -1,8 +1,15 @@
 // Layer partilhado pelas apps. Cada app faz extends: ['@zelo/ui'],
 // o que lhe da os componentes por auto-import, o layout e os tokens.
+import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
+
 export default defineNuxtConfig({
   alias: {
     '@': '.',
+  },
+  css: [fileURLToPath(new URL('./styles/global.css', import.meta.url))],
+  vite: {
+    plugins: [tailwindcss()],
   },
 
   runtimeConfig: {

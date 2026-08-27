@@ -38,41 +38,45 @@ const handleLogout = () => {
 </script>
 
 <template>
-  <div>
-    <aside>
-      <div>
-        <div>Z</div>
-      </div>
-      <nav>
+  <div class="flex min-h-screen bg-muted/30">
+    <aside class="fixed inset-y-0 left-0 z-20 flex w-16 flex-col bg-sidebar text-sidebar-foreground">
+      <div class="flex h-16 items-center justify-center text-lg font-bold">Z</div>
+      <nav class="flex flex-1 flex-col gap-1 px-2">
         <button
           v-for="item in navItems"
           :key="item.origin"
-          :class="{ active: isActive(item.origin) }"
+          :class="[
+            'flex h-10 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground',
+            isActive(item.origin) && 'bg-primary text-primary-foreground hover:bg-primary/90',
+          ]"
+          :title="item.label"
           @click="navigateTo(item)"
         >
-          <span>{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
+          <span class="text-lg">{{ item.icon }}</span>
         </button>
       </nav>
-      <div>
-        <button @click="handleLogout">
-          <span>↗</span>
-          <span>Logout</span>
+      <div class="flex justify-center p-2">
+        <button
+          class="flex h-10 w-10 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground"
+          title="Logout"
+          @click="handleLogout"
+        >
+          <span class="text-lg">↗</span>
         </button>
       </div>
     </aside>
 
-    <div>
-      <nav>
-        <ol>
-          <li v-for="(item, index) in breadcrumbs" :key="index">
-            <a v-if="!item.isLast" :href="item.href">{{ item.label }}</a>
-            <span v-else>{{ item.label }}</span>
-            <span v-if="index < breadcrumbs.length - 1" aria-hidden="true">/</span>
+    <div class="flex flex-1 flex-col pl-16">
+      <nav class="flex h-12 items-center border-b border-border bg-background px-6 text-sm">
+        <ol class="flex items-center gap-2">
+          <li v-for="(item, index) in breadcrumbs" :key="index" class="flex items-center gap-2">
+            <a v-if="!item.isLast" :href="item.href" class="text-muted-foreground hover:text-foreground">{{ item.label }}</a>
+            <span v-else class="font-medium text-foreground">{{ item.label }}</span>
+            <span v-if="index < breadcrumbs.length - 1" class="text-muted-foreground" aria-hidden="true">/</span>
           </li>
         </ol>
       </nav>
-      <div>
+      <div class="flex-1 overflow-y-auto p-6">
         <Transition name="page" mode="out-in">
           <slot :key="route.path" />
         </Transition>
@@ -80,3 +84,14 @@ const handleLogout = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.2s ease;
+}
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+}
+</style>

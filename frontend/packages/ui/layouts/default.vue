@@ -86,6 +86,8 @@ const breadcrumbs = computed(() => {
     flex-direction: column;
     height: auto;
     min-height: 100vh;
+    margin-left: 0;
+    margin-top: 64px;
   }
 }
 

@@ -162,12 +162,6 @@ const navItems = [
   justify-content: center;
 }
 
-/* Adjust main layout to account for fixed nav */
-:global(.z-shell) {
-  margin-left: 64px;
-  height: calc(100vh - 64px);
-}
-
 @media (max-width: 900px) {
   .nav-rail {
     position: fixed;
@@ -206,12 +200,6 @@ const navItems = [
 
   .nav-footer {
     margin-left: auto;
-  }
-
-  :global(.z-shell) {
-    margin-left: 0;
-    margin-top: 64px;
-    height: calc(100vh - 64px);
   }
 }
 </style>

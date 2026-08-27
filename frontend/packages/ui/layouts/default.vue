@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { useRuntimeConfig } from '#app'
 
 const route = useRoute()
-const router = useRouter()
+const config = useRuntimeConfig()
+const zelo = config.public.zelo as { shell: string; auto: string; inventory: string }
 
 const breadcrumbs = computed(() => {
   const parts = route.path.split('/').filter(Boolean)
@@ -18,13 +20,23 @@ const breadcrumbs = computed(() => {
 })
 
 const navItems = [
-  { label: 'Início', path: '/', icon: '⌂' },
-  { label: 'Auto', path: '/auto', icon: '◆' },
-  { label: 'Inventário', path: '/inventory', icon: '≡' },
+  { label: 'Início', path: '/', icon: '⌂', origin: zelo.shell },
+  { label: 'Auto', path: '/', icon: '◆', origin: zelo.auto },
+  { label: 'Inventário', path: '/', icon: '≡', origin: zelo.inventory },
 ]
 
-const isActive = (path: string) => route.path.startsWith(path)
-const handleLogout = () => router.push('/login')
+const isActive = (origin: string) => {
+  if (typeof window === 'undefined') return false
+  return window.location.origin === origin
+}
+
+const navigateTo = (item: typeof navItems[number]) => {
+  window.location.href = item.origin + item.path
+}
+
+const handleLogout = () => {
+  window.location.href = zelo.shell + '/login'
+}
 </script>
 
 <template>
@@ -36,9 +48,9 @@ const handleLogout = () => router.push('/login')
       <nav>
         <button
           v-for="item in navItems"
-          :key="item.path"
-          :class="{ active: isActive(item.path) }"
-          @click="router.push(item.path)"
+          :key="item.origin"
+          :class="{ active: isActive(item.origin) }"
+          @click="navigateTo(item)"
         >
           <span>{{ item.icon }}</span>
           <span>{{ item.label }}</span>

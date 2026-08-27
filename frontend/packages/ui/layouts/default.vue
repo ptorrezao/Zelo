@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useRuntimeConfig } from '#app'
+import { useRuntimeConfig, useRequestURL } from '#app'
 
 const route = useRoute()
 const config = useRuntimeConfig()
 const zelo = config.public.zelo as { shell: string; auto: string; inventory: string }
+const requestUrl = useRequestURL()
 
 const breadcrumbs = computed(() => {
   const parts = route.path.split('/').filter(Boolean)
@@ -25,10 +26,7 @@ const navItems = [
   { label: 'Inventário', path: '/', icon: '≡', origin: zelo.inventory },
 ]
 
-const isActive = (origin: string) => {
-  if (typeof window === 'undefined') return false
-  return window.location.origin === origin
-}
+const isActive = (origin: string) => requestUrl.origin === origin
 
 const navigateTo = (item: typeof navItems[number]) => {
   window.location.href = item.origin + item.path

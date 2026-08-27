@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import Button from '@zelo/ui/components/ui/Button.vue'
 import Card from '@zelo/ui/components/ui/Card.vue'
 import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
 import CardTitle from '@zelo/ui/components/ui/CardTitle.vue'
 import CardContent from '@zelo/ui/components/ui/CardContent.vue'
+import AddVehicleSheet from './AddVehicleSheet.vue'
 import { useVehicles } from '../composables/useVehicles'
 
 const { visibleGroups, selectedId, fullName, logoFor } = useVehicles()
+
+const isAddVehicleOpen = ref(false)
 
 // Todos os grupos comecam abertos; cada um pode ser fechado individualmente.
 const openGroups = reactive<Record<string, boolean>>({})
@@ -80,7 +83,9 @@ const markLogoError = (vehicleId: string) => {
       </div>
     </CardContent>
     <div class="border-t border-border p-4">
-      <Button class="w-full" variant="outline">+ Adicionar veículo</Button>
+      <Button class="w-full" variant="outline" @click="isAddVehicleOpen = true">+ Adicionar veículo</Button>
     </div>
   </Card>
+
+  <AddVehicleSheet v-model:open="isAddVehicleOpen" />
 </template>

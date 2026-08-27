@@ -54,11 +54,15 @@ const { selected, photo, fullName } = useVehicles()
           <span class="text-xs font-semibold uppercase text-muted-foreground">Próxima inspeção</span>
           <span class="text-sm font-medium">{{ selected?.nextInspection }}</span>
         </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase text-muted-foreground">Data do IUC</span>
+          <span class="text-sm font-medium">{{ selected?.iucDueDate }}</span>
+        </div>
       </div>
 
       <div class="flex items-center gap-4 border-y border-border py-4">
         <LicensePlate v-if="selected?.plate" :value="selected.plate" class="shrink-0" />
-        <a href="#documentos" class="text-sm font-medium text-primary hover:underline">Documentos</a>
+        <NuxtLink to="/documentos" class="text-sm font-medium text-primary hover:underline">Documentos</NuxtLink>
       </div>
     </CardContent>
   </Card>

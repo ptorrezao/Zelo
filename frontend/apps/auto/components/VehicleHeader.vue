@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
+import Button from '@zelo/ui/components/ui/Button.vue'
+import AddVehicleSheet from './AddVehicleSheet.vue'
 import { useVehicles } from '../composables/useVehicles'
 
 const { selected, fullName, logoFor } = useVehicles()
@@ -9,6 +11,8 @@ const logoErrors = reactive<Record<string, boolean>>({})
 const markLogoError = (vehicleId: string) => {
   logoErrors[vehicleId] = true
 }
+
+const isEditOpen = ref(false)
 </script>
 
 <template>
@@ -23,9 +27,12 @@ const markLogoError = (vehicleId: string) => {
       />
       <span v-else>{{ selected?.brand?.substring(0, 1) }}</span>
     </div>
-    <div>
+    <div class="flex-1">
       <h1 class="text-xl font-semibold">{{ fullName(selected) }}</h1>
       <p class="text-sm text-muted-foreground">{{ selected?.plate }}</p>
     </div>
+    <Button variant="outline" size="sm" @click="isEditOpen = true">Editar</Button>
   </div>
+
+  <AddVehicleSheet v-model:open="isEditOpen" :vehicle-id="selected?.id" />
 </template>

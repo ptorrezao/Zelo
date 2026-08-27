@@ -9,9 +9,12 @@ import Timeline from '@zelo/ui/components/ui/Timeline.vue'
 import TimelineItem from '@zelo/ui/components/ui/TimelineItem.vue'
 import TimelineIndicator from '@zelo/ui/components/ui/TimelineIndicator.vue'
 import TimelineContent from '@zelo/ui/components/ui/TimelineContent.vue'
+import AddMaintenanceSheet from './AddMaintenanceSheet.vue'
 import { useVehicles } from '../composables/useVehicles'
 
 const { selected } = useVehicles()
+
+const isAddOpen = ref(false)
 
 const typeColor: Record<string, string> = {
   preventiva: 'bg-primary',
@@ -39,13 +42,13 @@ const visibleMaintenances = computed(() =>
   <Card>
     <CardHeader class="flex flex-row items-center justify-between space-y-0">
       <CardTitle>Manutenção</CardTitle>
-      <Button size="sm">+ Adicionar</Button>
+      <Button size="sm" @click="isAddOpen = true">+ Adicionar</Button>
     </CardHeader>
     <CardContent>
       <Timeline>
         <TimelineItem
           v-for="(entry, index) in visibleMaintenances"
-          :key="entry.date"
+          :key="entry.id"
           :is-last="index === visibleMaintenances.length - 1"
         >
           <TimelineIndicator
@@ -53,23 +56,25 @@ const visibleMaintenances = computed(() =>
             :class="typeColor[entry.type] || 'bg-muted-foreground'"
           />
           <TimelineContent>
-            <div class="mb-1 flex items-center justify-between">
-              <span class="text-sm font-semibold">{{ entry.date }}</span>
-              <span
-                :class="[
-                  'rounded px-2 py-0.5 text-xs font-semibold text-white',
-                  typeColor[entry.type] || 'bg-muted-foreground',
-                ]"
-              >
-                {{ typeLabel[entry.type] || entry.type }}
-              </span>
-            </div>
-            <p class="mb-1 text-sm font-medium">{{ entry.description }}</p>
-            <div class="flex flex-col gap-0.5 text-xs text-muted-foreground">
-              <span>Oficina: {{ entry.workshop }}</span>
-              <span>Quilómetros: {{ entry.odometer }}</span>
-              <span>Custo: {{ entry.cost }} €</span>
-            </div>
+            <NuxtLink :to="`/manutencao/${entry.id}`" class="-m-2 block rounded-md p-2 transition-colors hover:bg-accent">
+              <div class="mb-1 flex items-center justify-between">
+                <span class="text-sm font-semibold">{{ entry.date }}</span>
+                <span
+                  :class="[
+                    'rounded px-2 py-0.5 text-xs font-semibold text-white',
+                    typeColor[entry.type] || 'bg-muted-foreground',
+                  ]"
+                >
+                  {{ typeLabel[entry.type] || entry.type }}
+                </span>
+              </div>
+              <p class="mb-1 text-sm font-medium">{{ entry.description }}</p>
+              <div class="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                <span>Oficina: {{ entry.workshop }}</span>
+                <span>Quilómetros: {{ entry.odometer }}</span>
+                <span>Custo: {{ entry.cost }} €</span>
+              </div>
+            </NuxtLink>
           </TimelineContent>
         </TimelineItem>
       </Timeline>
@@ -85,4 +90,6 @@ const visibleMaintenances = computed(() =>
       </Button>
     </CardContent>
   </Card>
+
+  <AddMaintenanceSheet v-model:open="isAddOpen" />
 </template>

@@ -48,7 +48,7 @@ const typeColor: Record<string, string> = {
               @click="selectedId = vehicle.id"
             >
               <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-semibold">
-                {{ logoFor(vehicle)?.substring(0, 1) || 'V' }}
+                {{ logoFor(vehicle)?.substring(0, 1) || 'V' }} {{ vehicle }}
               </div>
               <div class="flex min-w-0 flex-col">
                 <span class="truncate text-sm font-medium">{{ fullName(vehicle) }}</span>
@@ -72,12 +72,12 @@ const typeColor: Record<string, string> = {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
+      <div class="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+        <Card class="flex h-full flex-col">
           <CardHeader>
             <CardTitle>{{ fullName(selected) }}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent class="flex flex-1 flex-col">
             <div class="mb-6 grid grid-cols-2 gap-4">
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold uppercase text-muted-foreground">VIN</span>

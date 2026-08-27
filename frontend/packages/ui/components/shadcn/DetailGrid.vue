@@ -1,9 +1,12 @@
 <script setup lang="ts">
-export interface Props {
+import { cn } from '../../lib/utils'
+
+interface Props {
+  class?: string
   columns?: number
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   columns: 2,
 })
 </script>

@@ -1,23 +1,24 @@
 <script setup lang="ts">
-export interface Props {
+import { cn } from '../../lib/utils'
+import SAvatar from './Avatar.vue'
+
+interface Props {
   title: string
   subtitle?: string
   avatar?: string
   avatarName?: string
+  class?: string
 }
 
-withDefaults(defineProps<Props>(), {
-  subtitle: '',
-})
+defineProps<Props>()
 </script>
 
 <template>
-  <div class="page-header">
+  <div class="page-header" :class="cn('', class)">
     <div v-if="avatar || avatarName" class="page-header__avatar">
-      <ZAvatar
+      <SAvatar
         v-if="avatarName"
-        :name="avatarName"
-        size="lg"
+        :initials="avatarName"
       />
       <img v-else :src="avatar" :alt="title" class="page-header__image" />
     </div>

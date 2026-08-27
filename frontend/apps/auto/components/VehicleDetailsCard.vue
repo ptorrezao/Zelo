@@ -9,11 +9,21 @@ const { selected, photo, fullName } = useVehicles()
 </script>
 
 <template>
-  <Card>
-    <CardHeader>
+  <Card class="relative overflow-hidden">
+    <!-- Foto do veiculo como fundo decorativo, ancorada ao canto inferior
+         direito e a esbater para a cor do card, para nao tapar o texto. -->
+    <img
+      v-if="photo"
+      :src="photo"
+      :alt="fullName(selected)"
+      class="pointer-events-none absolute bottom-0 right-0 hidden max-h-[85%] w-1/2 object-contain object-bottom opacity-40 md:block"
+    />
+    <div class="pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-card via-card/80 to-transparent md:block"></div>
+
+    <CardHeader class="relative">
       <CardTitle>{{ fullName(selected) }}</CardTitle>
     </CardHeader>
-    <CardContent>
+    <CardContent class="relative md:max-w-[60%]">
       <div class="mb-6 grid grid-cols-2 gap-4">
         <div class="flex flex-col gap-1">
           <span class="text-xs font-semibold uppercase text-muted-foreground">VIN</span>
@@ -41,14 +51,15 @@ const { selected, photo, fullName } = useVehicles()
         </div>
       </div>
 
-      <div class="my-4 flex items-center gap-4 border-y border-border py-4">
+      <div class="flex items-center gap-4 border-y border-border py-4">
         <div class="rounded-sm bg-blue-900 px-3 py-2 font-mono text-sm font-semibold text-white">
           {{ selected?.plate }}
         </div>
         <a href="#documentos" class="text-sm font-medium text-primary hover:underline">Documentos</a>
       </div>
 
-      <div class="flex justify-center pt-4">
+      <!-- Em ecras pequenos nao ha espaco para a foto de fundo, por isso mostra-se normal por baixo. -->
+      <div class="flex justify-center pt-4 md:hidden">
         <img v-if="photo" :src="photo" :alt="fullName(selected)" class="max-h-[300px] max-w-full rounded-md" />
       </div>
     </CardContent>

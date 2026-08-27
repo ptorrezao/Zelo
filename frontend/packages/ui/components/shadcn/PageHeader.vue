@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { cn } from '../../lib/utils'
 import SAvatar from './Avatar.vue'
 
@@ -10,11 +11,13 @@ interface Props {
   class?: string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const headerClass = computed(() => cn('page-header', props.class))
 </script>
 
 <template>
-  <div class="page-header" :class="cn('', class)">
+  <div :class="headerClass">
     <div v-if="avatar || avatarName" class="page-header__avatar">
       <SAvatar
         v-if="avatarName"

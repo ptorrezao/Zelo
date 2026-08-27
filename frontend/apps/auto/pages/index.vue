@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useVehicles } from '../composables/useVehicles'
-import ZPageHeader from '@zelo/ui/components/ZPageHeader.vue'
+import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
 import '../styles/tokens.css'
 import '../styles/components.css'
 import '../styles/pages/index.css'
@@ -41,7 +41,7 @@ const {
  <ZWorkspace>
     <div class="main__content">
       <ZPanel>
-        <ZPageHeader :title="selected.driver" :subtitle="`ID: ${selected.id}`" :avatar-name="selected.driver" />
+        <PageHeader :title="selected.driver" :subtitle="`ID: ${selected.id}`" :avatar-name="selected.driver" />
       </ZPanel>
       <ZPanel>
         <div class="hero">

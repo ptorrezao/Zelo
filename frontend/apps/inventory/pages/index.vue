@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import ZPageHeader from '@zelo/ui/components/ZPageHeader.vue'
-import ZDetailGrid from '@zelo/ui/components/ZDetailGrid.vue'
+import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
+import DetailGrid from '@zelo/ui/components/shadcn/DetailGrid.vue'
 
 const title = 'Inventory'
 const subtitle = 'Manage your inventory items'
@@ -10,14 +10,14 @@ const subtitle = 'Manage your inventory items'
   <ZWorkspace>
     <div class="inventory__wrapper">
       <ZPanel>
-        <ZPageHeader
+        <PageHeader
           :title="title"
           :subtitle="subtitle"
           avatar-name="Inventory"
         />
       </ZPanel>
 
-      <ZDetailGrid>
+      <DetailGrid>
         <ZPanel title="Items">
           <p class="inventory__empty">
             Nenhum artigo registado. Comece por adicionar um novo artigo.
@@ -33,7 +33,7 @@ const subtitle = 'Manage your inventory items'
             <ZButton variant="primary">Guardar</ZButton>
           </div>
         </ZPanel>
-      </ZDetailGrid>
+      </DetailGrid>
     </div>
   </ZWorkspace>
 </template>

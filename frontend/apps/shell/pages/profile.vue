@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useAuth } from '../composables/useAuth'
-import ZPageHeader from '@zelo/ui/components/ZPageHeader.vue'
-import ZDetailGrid from '@zelo/ui/components/ZDetailGrid.vue'
+import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
+import DetailGrid from '@zelo/ui/components/shadcn/DetailGrid.vue'
 
 const { user } = useAuth()
 </script>
@@ -10,14 +10,14 @@ const { user } = useAuth()
   <ZWorkspace>
     <div class="profile__wrapper">
       <ZPanel>
-        <ZPageHeader
+        <PageHeader
           title="Account Settings"
           subtitle="Manage your profile information"
           :avatar-name="user?.email || 'User'"
         />
       </ZPanel>
 
-      <ZDetailGrid>
+      <DetailGrid>
         <ZPanel title="Account Information">
           <ZStatGroup :columns="1">
             <ZStat label="Email Address" :value="user?.email || 'Not set'" />
@@ -43,7 +43,7 @@ const { user } = useAuth()
             <ZButton size="sm">Enable 2FA</ZButton>
           </div>
         </ZPanel>
-      </ZDetailGrid>
+      </DetailGrid>
     </div>
   </ZWorkspace>
 </template>

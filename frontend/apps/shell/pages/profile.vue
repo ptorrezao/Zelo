@@ -1,60 +1,68 @@
 <script setup lang="ts">
 import { useAuth } from '../composables/useAuth'
+import Avatar from '@zelo/ui/components/ui/Avatar.vue'
+import Button from '@zelo/ui/components/ui/Button.vue'
+import Card from '@zelo/ui/components/ui/Card.vue'
+import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
+import CardTitle from '@zelo/ui/components/ui/CardTitle.vue'
+import CardContent from '@zelo/ui/components/ui/CardContent.vue'
 
 const { user } = useAuth()
 </script>
 
 <template>
-  <div class="profile-page">
-    <div class="page-header">
-      <div class="header-avatar">{{ user?.email?.substring(0, 1).toUpperCase() || 'U' }}</div>
-      <div class="header-text">
-        <h1 class="header-title">Definições de Conta</h1>
-        <p class="header-subtitle">Gerencie sua informação de perfil</p>
+  <div class="flex flex-col gap-6">
+    <div class="flex items-center gap-4 rounded-lg border border-border bg-card p-6 shadow-sm">
+      <Avatar :name="user?.email?.substring(0, 1).toUpperCase() || 'U'" class="h-12 w-12 text-base" />
+      <div>
+        <h1 class="text-xl font-semibold">Definições de Conta</h1>
+        <p class="text-sm text-muted-foreground">Gerencie sua informação de perfil</p>
       </div>
     </div>
 
-    <div class="profile-grid">
-      <div class="card">
-        <h2 class="card-title">Informações da Conta</h2>
-        <div class="info-list">
-          <div class="info-item">
-            <span class="label">Email</span>
-            <span class="value">{{ user?.email || 'Não definido' }}</span>
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações da Conta</CardTitle>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-6">
+          <div class="flex flex-col gap-1">
+            <span class="text-xs font-semibold uppercase text-muted-foreground">Email</span>
+            <span class="text-sm font-medium">{{ user?.email || 'Não definido' }}</span>
           </div>
-          <div class="info-item">
-            <span class="label">Estado da Conta</span>
-            <span class="value">Ativo</span>
+          <div class="flex flex-col gap-1">
+            <span class="text-xs font-semibold uppercase text-muted-foreground">Estado da Conta</span>
+            <span class="text-sm font-medium">Ativo</span>
           </div>
-          <div class="info-item">
-            <span class="label">Membro desde</span>
-            <span class="value">2024</span>
+          <div class="flex flex-col gap-1">
+            <span class="text-xs font-semibold uppercase text-muted-foreground">Membro desde</span>
+            <span class="text-sm font-medium">2024</span>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div class="card">
-        <h2 class="card-title">Segurança</h2>
-        <div class="security-section">
-          <div class="section-content">
-            <h3 class="section-title">Palavra-passe</h3>
-            <p class="section-description">
+      <Card>
+        <CardHeader>
+          <CardTitle>Segurança</CardTitle>
+        </CardHeader>
+        <CardContent class="flex flex-col divide-y divide-border">
+          <div class="pb-4">
+            <h3 class="mb-2 text-sm font-semibold">Palavra-passe</h3>
+            <p class="mb-4 text-sm leading-relaxed text-muted-foreground">
               Altere a sua palavra-passe regularmente para manter a sua conta segura.
             </p>
-            <button class="btn">Alterar Palavra-passe</button>
+            <Button variant="outline" size="sm">Alterar Palavra-passe</Button>
           </div>
 
-          <div class="section-divider"></div>
-
-          <div class="section-content">
-            <h3 class="section-title">Autenticação de Dois Fatores</h3>
-            <p class="section-description">
+          <div class="pt-4">
+            <h3 class="mb-2 text-sm font-semibold">Autenticação de Dois Fatores</h3>
+            <p class="mb-4 text-sm leading-relaxed text-muted-foreground">
               Adicione uma camada extra de segurança à sua conta.
             </p>
-            <button class="btn">Ativar 2FA</button>
+            <Button variant="outline" size="sm">Ativar 2FA</Button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   </div>
 </template>

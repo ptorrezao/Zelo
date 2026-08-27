@@ -4,7 +4,6 @@ export default defineNuxtConfig({
   alias: {
     '@': '.',
   },
-  css: ['@zelo/config/tokens.css'],
 
   runtimeConfig: {
     public: {

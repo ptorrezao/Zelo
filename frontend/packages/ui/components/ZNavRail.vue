@@ -1,6 +1,23 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
 const { zelo } = useAppConfig()
 const urls = useRuntimeConfig().public.zelo as Record<string, string>
+
+// TODO: Get user from auth store
+const user = ref<{ email: string } | null>({ email: 'user@example.com' })
+
+async function handleLogout() {
+  // Clear auth token
+  const token = useCookie('auth_token')
+  token.value = null
+
+  // Redirect to shell login page (base URL)
+  window.location.href = '/login'
+}
 
 // Cookie em vez de localStorage: o servidor le-o e ja rende o rail no
 // estado certo, sem o salto que a leitura no cliente provocaria. Com
@@ -64,24 +81,59 @@ const icons: Record<string, string> = {
       <div class="z-rail__body">
         <div class="z-rail__clip">
           <ul class="z-rail__list">
-          <li v-for="mod in zelo.modules" :key="mod.key">
-            <a
-              class="z-rail__link"
-              :class="{ 'z-rail__link--current': mod.key === zelo.currentModule }"
-              :href="urls[mod.key]"
-              :aria-current="mod.key === zelo.currentModule ? 'page' : undefined"
-            >
-              <svg class="z-rail__icon" viewBox="0 0 20 20" aria-hidden="true">
-                <path
-                  :d="icons[mod.icon] ?? icons.grid"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span class="z-rail__name">{{ mod.label }}</span>
-            </a>
+            <li v-for="mod in zelo.modules" :key="mod.key">
+              <a
+                class="z-rail__link"
+                :class="{ 'z-rail__link--current': mod.key === zelo.currentModule }"
+                :href="urls[mod.key]"
+                :aria-current="mod.key === zelo.currentModule ? 'page' : undefined"
+              >
+                <svg class="z-rail__icon" viewBox="0 0 20 20" aria-hidden="true">
+                  <path
+                    :d="icons[mod.icon] ?? icons.grid"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <span class="z-rail__name">{{ mod.label }}</span>
+              </a>
+            </li>
+
+            <li class="z-rail__divider" />
+
+            <li>
+              <a
+                :href="`${urls.shell}/profile`"
+                class="z-rail__link"
+                :title="`Profile: ${user?.email}`"
+              >
+                <svg class="z-rail__icon" viewBox="0 0 20 20" aria-hidden="true">
+                  <path
+                    d="M10 10a2 2 0 100-4 2 2 0 000 4zM1 18a8 8 0 1116 0H1z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span class="z-rail__name">{{ user?.email || 'User' }}</span>
+              </a>
+            </li>
+
+            <li>
+              <a
+                href="#"
+                class="z-rail__link"
+                @click.prevent="handleLogout"
+                title="Logout"
+              >
+                <svg class="z-rail__icon" viewBox="0 0 20 20" aria-hidden="true">
+                  <path
+                    d="M17 6l-5.293 5.293a1 1 0 101.414 1.414L18.414 7.414a2 2 0 000-2.828l-1.414-1.414a1 1 0 00-1.414 1.414L17 6zM3 5a2 2 0 00-2 2v6a2 2 0 002 2h5v-2H3V7h5V5H3z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span class="z-rail__name">Logout</span>
+              </a>
             </li>
           </ul>
         </div>
@@ -124,6 +176,8 @@ const icons: Record<string, string> = {
      para continuar disponivel a leitores de ecra. */
   overflow: hidden;
   transition: width 180ms ease;
+  display: flex;
+  flex-direction: column;
 }
 
 /* O teclado abre o painel em qualquer aparelho: sem isto, quem navega
@@ -152,6 +206,18 @@ const icons: Record<string, string> = {
   margin-bottom: var(--z-space-4);
   /* mesmo recuo da lista, para o icone do botao alinhar com os dos modulos */
   padding: 0 10px;
+}
+
+.z-rail__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.z-rail__divider {
+  height: 1px;
+  margin: var(--z-space-2) 0;
+  background: rgb(255 255 255 / 8%);
 }
 
 .z-rail__toggle {

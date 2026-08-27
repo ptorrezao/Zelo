@@ -1,6 +1,15 @@
-/* Side Panel - Search */
-.side__search {
+/* Main Content Area */
+.main__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--z-space-4);
+  flex: 1;
+}
+
+/* Main Search */
+.main__search {
   border-bottom: var(--z-border-subtle);
+  padding-bottom: var(--z-space-4);
 }
 
 /* Side Panel - List */
@@ -24,7 +33,7 @@
   border-top: var(--z-border-subtle);
 }
 
-/* Main Content Grid */
+/* Cards Grid */
 .columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

@@ -1,13 +1,30 @@
 <script setup lang="ts">
-defineProps<{ label: string }>()
+import { useId } from 'vue'
+import SInput from './shadcn/Input.vue'
+
+interface Props {
+  label?: string
+  placeholder?: string
+  type?: string
+  disabled?: boolean
+}
+
+defineProps<Props>()
 const model = defineModel<string>()
 const id = useId()
 </script>
 
 <template>
   <div class="z-field">
-    <label class="z-field__label" :for="id">{{ label }}</label>
-    <input :id="id" v-model="model" class="z-field__input">
+    <label v-if="label" class="z-field__label" :for="id">{{ label }}</label>
+    <SInput
+      :id="id"
+      :model-value="model"
+      :placeholder="placeholder"
+      :type="type"
+      :disabled="disabled"
+      @update:model-value="model = $event"
+    />
   </div>
 </template>
 
@@ -21,12 +38,5 @@ const id = useId()
 .z-field__label {
   font-size: var(--z-font-size-sm);
   color: var(--z-color-text-muted);
-}
-
-.z-field__input {
-  padding: var(--z-space-2) var(--z-space-3);
-  border: var(--z-border);
-  border-radius: var(--z-radius);
-  font: inherit;
 }
 </style>

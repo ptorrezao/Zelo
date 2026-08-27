@@ -6,14 +6,12 @@ import Card from '@zelo/ui/components/ui/Card.vue'
 import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
 import CardTitle from '@zelo/ui/components/ui/CardTitle.vue'
 import CardContent from '@zelo/ui/components/ui/CardContent.vue'
+import VehicleListCard from '../components/VehicleListCard.vue'
 
 const {
-  visibleGroups,
-  selectedId,
   selected,
   photo,
   fullName,
-  logoFor,
   formatConsumption,
   formatKms,
   formatCost,
@@ -28,40 +26,7 @@ const typeColor: Record<string, string> = {
 
 <template>
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
-    <Card class="h-fit lg:sticky lg:top-6">
-      <CardHeader>
-        <CardTitle>Veículos</CardTitle>
-      </CardHeader>
-      <CardContent class="flex max-h-[60vh] flex-col gap-4 overflow-y-auto">
-        <div v-for="group in visibleGroups" :key="group.label">
-          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ group.label }}</h3>
-          <div class="flex flex-col gap-2">
-            <button
-              v-for="vehicle in group.items"
-              :key="vehicle.id"
-              :class="[
-                'flex items-center gap-3 rounded-md border-2 p-3 text-left transition-colors',
-                vehicle.id === selectedId
-                  ? 'border-primary bg-primary/10'
-                  : 'border-transparent bg-muted hover:bg-accent',
-              ]"
-              @click="selectedId = vehicle.id"
-            >
-              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-semibold">
-                {{ logoFor(vehicle)?.substring(0, 1) || 'V' }} {{ vehicle }}
-              </div>
-              <div class="flex min-w-0 flex-col">
-                <span class="truncate text-sm font-medium">{{ fullName(vehicle) }}</span>
-                <span class="text-xs text-muted-foreground">{{ vehicle.plate }}</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </CardContent>
-      <div class="border-t border-border p-4">
-        <Button class="w-full" variant="outline">+ Adicionar veículo</Button>
-      </div>
-    </Card>
+    <VehicleListCard />
 
     <main class="flex flex-col gap-6">
       <div class="flex items-center gap-4 rounded-lg border border-border bg-card p-6 shadow-sm">

@@ -171,24 +171,28 @@ function formatCost(value: number) {
   return value.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })
 }
 
-export function useVehicles() {
-  const groups = ref(vehicleGroups)
-  const query = ref('')
-  const selectedId = ref('236-542-010')
+// Estado partilhado a nivel de modulo: todas as chamadas a useVehicles()
+// devolvem as mesmas refs, para a sidebar e o conteudo principal
+// (componentes diferentes) ficarem sincronizados na mesma selecao.
+const groups = ref(vehicleGroups)
+const query = ref('')
+const selectedId = ref('236-542-010')
 
+export function useVehicles() {
   const allVehicles = computed(() => groups.value.flatMap(group => group.items))
   const selected = computed(() => allVehicles.value.find(v => v.id === selectedId.value) ?? allVehicles.value[0])
   const photo = computed(() => photoFor(selected.value))
 
   const visibleGroups = computed(() => {
     const term = query.value.trim().toLowerCase()
-    if (!term) { return groups.value }
     return groups.value
       .map(group => ({
         ...group,
-        items: group.items.filter(v =>
-          fullName(v).toLowerCase().includes(term) || v.plate.toLowerCase().includes(term),
-        ),
+        items: term
+          ? group.items.filter(v =>
+              fullName(v).toLowerCase().includes(term) || v.plate.toLowerCase().includes(term),
+            )
+          : group.items,
       }))
       .filter(group => group.items.length > 0)
   })

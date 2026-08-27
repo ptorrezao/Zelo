@@ -9,11 +9,11 @@ const { selected, photo, fullName } = useVehicles()
 </script>
 
 <template>
-  <Card class="flex h-full flex-col">
+  <Card>
     <CardHeader>
       <CardTitle>{{ fullName(selected) }}</CardTitle>
     </CardHeader>
-    <CardContent class="flex flex-1 flex-col">
+    <CardContent>
       <div class="mb-6 grid grid-cols-2 gap-4">
         <div class="flex flex-col gap-1">
           <span class="text-xs font-semibold uppercase text-muted-foreground">VIN</span>

@@ -2,6 +2,20 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRuntimeConfig, useRequestURL } from '#app'
+import { Box, Home, LogOut, Truck } from '@lucide/vue'
+import SidebarProvider from '../components/ui/SidebarProvider.vue'
+import Sidebar from '../components/ui/Sidebar.vue'
+import SidebarRail from '../components/ui/SidebarRail.vue'
+import SidebarInset from '../components/ui/SidebarInset.vue'
+import SidebarHeader from '../components/ui/SidebarHeader.vue'
+import SidebarContent from '../components/ui/SidebarContent.vue'
+import SidebarFooter from '../components/ui/SidebarFooter.vue'
+import SidebarGroup from '../components/ui/SidebarGroup.vue'
+import SidebarGroupContent from '../components/ui/SidebarGroupContent.vue'
+import SidebarMenu from '../components/ui/SidebarMenu.vue'
+import SidebarMenuItem from '../components/ui/SidebarMenuItem.vue'
+import SidebarMenuButton from '../components/ui/SidebarMenuButton.vue'
+import SidebarTrigger from '../components/ui/SidebarTrigger.vue'
 
 const route = useRoute()
 const config = useRuntimeConfig()
@@ -21,16 +35,12 @@ const breadcrumbs = computed(() => {
 })
 
 const navItems = [
-  { label: 'Início', path: '/', icon: '⌂', origin: zelo.shell },
-  { label: 'Auto', path: '/', icon: '◆', origin: zelo.auto },
-  { label: 'Inventário', path: '/', icon: '≡', origin: zelo.inventory },
+  { label: 'Início', path: '/', icon: Home, origin: zelo.shell },
+  { label: 'Auto', path: '/', icon: Truck, origin: zelo.auto },
+  { label: 'Inventário', path: '/', icon: Box, origin: zelo.inventory },
 ]
 
 const isActive = (origin: string) => requestUrl.origin === origin
-
-const navigateTo = (item: typeof navItems[number]) => {
-  window.location.href = item.origin + item.path
-}
 
 const handleLogout = () => {
   window.location.href = zelo.shell + '/login'
@@ -38,36 +48,51 @@ const handleLogout = () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-muted/30">
-    <aside class="fixed inset-y-0 left-0 z-20 flex w-16 flex-col bg-sidebar text-sidebar-foreground">
-      <div class="flex h-16 items-center justify-center text-lg font-bold">Z</div>
-      <nav class="flex flex-1 flex-col gap-1 px-2">
-        <button
-          v-for="item in navItems"
-          :key="item.origin"
-          :class="[
-            'flex h-10 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground',
-            isActive(item.origin) && 'bg-primary text-primary-foreground hover:bg-primary/90',
-          ]"
-          :title="item.label"
-          @click="navigateTo(item)"
-        >
-          <span class="text-lg">{{ item.icon }}</span>
-        </button>
-      </nav>
-      <div class="flex justify-center p-2">
-        <button
-          class="flex h-10 w-10 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground"
-          title="Logout"
-          @click="handleLogout"
-        >
-          <span class="text-lg">↗</span>
-        </button>
-      </div>
-    </aside>
+  <SidebarProvider class="bg-muted/30">
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <div class="flex h-8 items-center gap-2 px-2 text-lg font-bold">
+          <span class="flex h-6 w-6 shrink-0 items-center justify-center">Z</span>
+          <span class="group-data-[collapsible=icon]:hidden">Zelo</span>
+        </div>
+      </SidebarHeader>
 
-    <div class="flex flex-1 flex-col pl-16">
-      <nav class="flex h-12 items-center border-b border-border bg-background px-6 text-sm">
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem v-for="item in navItems" :key="item.origin">
+                <SidebarMenuButton
+                  :href="item.origin + item.path"
+                  :is-active="isActive(item.origin)"
+                  :tooltip="item.label"
+                >
+                  <component :is="item.icon" class="h-4 w-4" />
+                  <span>{{ item.label }}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Logout" @click="handleLogout">
+              <LogOut class="h-4 w-4" />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+
+      <SidebarRail />
+    </Sidebar>
+
+    <SidebarInset>
+      <nav class="flex h-12 items-center gap-3 border-b border-border bg-background px-4 text-sm">
+        <SidebarTrigger />
         <ol class="flex items-center gap-2">
           <li v-for="(item, index) in breadcrumbs" :key="index" class="flex items-center gap-2">
             <a v-if="!item.isLast" :href="item.href" class="text-muted-foreground hover:text-foreground">{{ item.label }}</a>
@@ -81,8 +106,8 @@ const handleLogout = () => {
           <slot :key="route.path" />
         </Transition>
       </div>
-    </div>
-  </div>
+    </SidebarInset>
+  </SidebarProvider>
 </template>
 
 <style scoped>

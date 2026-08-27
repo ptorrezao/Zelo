@@ -1,9 +1,4 @@
 <script setup lang="ts">
-import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
-import Container from '@zelo/ui/components/shadcn/Container.vue'
-import Panel from '@zelo/ui/components/shadcn/Panel.vue'
-import SButton from '@zelo/ui/components/shadcn/Button.vue'
-
 const stats = [
   { label: 'Total de veículos', value: '3' },
   { label: 'Quilómetros este mês', value: '2.145 km' },
@@ -13,37 +8,40 @@ const stats = [
 </script>
 
 <template>
-  <Container>
-    <PageHeader
-      title="Bem-vindo ao Zelo"
-      subtitle="Seu gerenciador de frota pessoal"
-      avatar-name="PT"
-    />
+  <div class="home-page">
+    <div class="page-header">
+      <div class="header-avatar">PT</div>
+      <div class="header-text">
+        <h1 class="header-title">Bem-vindo ao Zelo</h1>
+        <p class="header-subtitle">Seu gerenciador de frota pessoal</p>
+      </div>
+    </div>
 
     <div class="home-grid">
-      <Panel title="Visão Geral">
-        <div class="overview-content">
-          <p class="intro-text">
-            Zelo é uma aplicação para gerenciar sua frota pessoal de veículos.
-            Acompanhe manutenção, quilometragem, custos e muito mais.
-          </p>
-          <div class="cta-buttons">
-            <SButton variant="default">Ver Veículos</SButton>
-            <SButton variant="default">Novo Veículo</SButton>
-          </div>
+      <div class="card">
+        <h2 class="card-title">Visão Geral</h2>
+        <p class="card-text">
+          Zelo é uma aplicação para gerenciar sua frota pessoal de veículos.
+          Acompanhe manutenção, quilometragem, custos e muito mais.
+        </p>
+        <div class="card-buttons">
+          <button class="btn btn-primary">Ver Veículos</button>
+          <button class="btn">Novo Veículo</button>
         </div>
-      </Panel>
+      </div>
 
-      <Panel title="Estatísticas">
+      <div class="card">
+        <h2 class="card-title">Estatísticas</h2>
         <div class="stats-list">
           <div v-for="stat in stats" :key="stat.label" class="stat-item">
             <span class="stat-label">{{ stat.label }}</span>
             <span class="stat-value">{{ stat.value }}</span>
           </div>
         </div>
-      </Panel>
+      </div>
 
-      <Panel title="Aplicações">
+      <div class="card">
+        <h2 class="card-title">Aplicações</h2>
         <div class="apps-grid">
           <div class="app-card">
             <div class="app-icon">◆</div>
@@ -56,9 +54,10 @@ const stats = [
             <p class="app-description">Organize seus artigos</p>
           </div>
         </div>
-      </Panel>
+      </div>
 
-      <Panel title="Recursos">
+      <div class="card">
+        <h2 class="card-title">Recursos</h2>
         <div class="resources-list">
           <a href="#" class="resource-link">
             <span class="resource-icon">📖</span>
@@ -75,12 +74,60 @@ const stats = [
             </div>
           </a>
         </div>
-      </Panel>
+      </div>
     </div>
-  </Container>
+  </div>
 </template>
 
 <style scoped>
+.home-page {
+  padding: 1.5rem;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.header-avatar {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0066cc;
+  color: white;
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.header-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #999;
+}
+
 .home-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -93,16 +140,59 @@ const stats = [
   }
 }
 
-.intro-text {
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 1rem;
+}
+
+.card-text {
   margin: 0 0 1.5rem 0;
   color: #666;
   line-height: 1.6;
   font-size: 0.95rem;
 }
 
-.cta-buttons {
+.card-buttons {
   display: flex;
   gap: 0.75rem;
+}
+
+.btn {
+  padding: 0.75rem 1rem;
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn:hover {
+  background: #e0e0e0;
+}
+
+.btn-primary {
+  background: #0066cc;
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover {
+  background: #0052a3;
 }
 
 .stats-list {
@@ -117,7 +207,7 @@ const stats = [
   align-items: center;
   padding: 0.75rem;
   background: #f9f9f9;
-  border-radius: 0.5rem;
+  border-radius: 6px;
 }
 
 .stat-label {
@@ -140,7 +230,7 @@ const stats = [
 .app-card {
   padding: 1rem;
   background: #f9f9f9;
-  border-radius: 0.5rem;
+  border-radius: 6px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -181,7 +271,7 @@ const stats = [
   gap: 1rem;
   padding: 1rem;
   background: #f9f9f9;
-  border-radius: 0.5rem;
+  border-radius: 6px;
   text-decoration: none;
   color: inherit;
   transition: all 0.2s ease;
@@ -193,7 +283,7 @@ const stats = [
 
 .resource-icon {
   font-size: 1.5rem;
-  flex: none;
+  flex-shrink: 0;
 }
 
 .resource-title {
@@ -207,10 +297,5 @@ const stats = [
   margin: 0;
   font-size: 0.8rem;
   color: #999;
-}
-
-.overview-content {
-  display: flex;
-  flex-direction: column;
 }
 </style>

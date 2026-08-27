@@ -1,23 +1,22 @@
 <script setup lang="ts">
 import { useAuth } from '../composables/useAuth'
-import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
-import Container from '@zelo/ui/components/shadcn/Container.vue'
-import Panel from '@zelo/ui/components/shadcn/Panel.vue'
-import SButton from '@zelo/ui/components/shadcn/Button.vue'
 
 const { user } = useAuth()
 </script>
 
 <template>
-  <Container>
-    <PageHeader
-      title="Definições de Conta"
-      subtitle="Gerencie sua informação de perfil"
-      :avatar-name="user?.email?.substring(0, 1).toUpperCase() || 'U'"
-    />
+  <div class="profile-page">
+    <div class="page-header">
+      <div class="header-avatar">{{ user?.email?.substring(0, 1).toUpperCase() || 'U' }}</div>
+      <div class="header-text">
+        <h1 class="header-title">Definições de Conta</h1>
+        <p class="header-subtitle">Gerencie sua informação de perfil</p>
+      </div>
+    </div>
 
     <div class="profile-grid">
-      <Panel title="Informações da Conta">
+      <div class="card">
+        <h2 class="card-title">Informações da Conta</h2>
         <div class="info-list">
           <div class="info-item">
             <span class="label">Email</span>
@@ -32,16 +31,17 @@ const { user } = useAuth()
             <span class="value">2024</span>
           </div>
         </div>
-      </Panel>
+      </div>
 
-      <Panel title="Segurança">
+      <div class="card">
+        <h2 class="card-title">Segurança</h2>
         <div class="security-section">
           <div class="section-content">
             <h3 class="section-title">Palavra-passe</h3>
             <p class="section-description">
               Altere a sua palavra-passe regularmente para manter a sua conta segura.
             </p>
-            <SButton variant="default" size="sm">Alterar Palavra-passe</SButton>
+            <button class="btn">Alterar Palavra-passe</button>
           </div>
 
           <div class="section-divider"></div>
@@ -51,15 +51,63 @@ const { user } = useAuth()
             <p class="section-description">
               Adicione uma camada extra de segurança à sua conta.
             </p>
-            <SButton variant="default" size="sm">Ativar 2FA</SButton>
+            <button class="btn">Ativar 2FA</button>
           </div>
         </div>
-      </Panel>
+      </div>
     </div>
-  </Container>
+  </div>
 </template>
 
 <style scoped>
+.profile-page {
+  padding: 1.5rem;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.header-avatar {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0066cc;
+  color: white;
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.header-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #999;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -70,6 +118,20 @@ const { user } = useAuth()
   .profile-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
 }
 
 .info-list {
@@ -129,5 +191,22 @@ const { user } = useAuth()
   font-size: 0.85rem;
   color: #666;
   line-height: 1.5;
+}
+
+.btn {
+  padding: 0.75rem 1rem;
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn:hover {
+  background: #e0e0e0;
 }
 </style>

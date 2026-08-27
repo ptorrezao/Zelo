@@ -46,7 +46,7 @@ const {
     </div>
 
     <div class="side__footer">
-      <ZButton variant="primary">+ Adicionar veículo</ZButton>
+      <ZButton variant="primary" size="sm">+ Adicionar veículo</ZButton>
     </div>
   </ZSidePanel>
 
@@ -86,7 +86,7 @@ const {
     <div class="columns">
       <ZPanel title="Manutenção">
         <template #action>
-          <ZButton size="sm">+ Adicionar</ZButton>
+          <ZButton variant="primary" size="sm">+ Adicionar manutenção</ZButton>
         </template>
 
         <div class="maintenance__timeline">

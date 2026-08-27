@@ -3,12 +3,17 @@
 // elemento; a pagina preenche o resto com ZWorkspace, opcionalmente
 // precedido de ZSidePanel quando precisa de uma lista a esquerda.
 // O flex aceita as duas composicoes sem variantes de layout.
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
 </script>
 
 <template>
   <div class="z-shell">
     <ZNavRail />
-    <slot />
+    <Transition name="page" mode="out-in">
+      <slot :key="route.path" />
+    </Transition>
   </div>
 </template>
 
@@ -29,5 +34,19 @@
     height: auto;
     min-height: 100vh;
   }
+}
+
+/* Page Transitions */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.8s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+}
+
+.page-leave-to {
+  opacity: 0;
 }
 </style>

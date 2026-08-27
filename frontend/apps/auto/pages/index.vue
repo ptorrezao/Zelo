@@ -1,235 +1,18 @@
 <script setup lang="ts">
-interface Maintenance {
-  date: string
-  odometer: string
-  workshop: string
-  description: string
-  cost: string
-  type: 'preventiva' | 'corretiva'
-}
+import { useVehicles } from '../composables/useVehicles'
 
-interface VehicleStats {
-  kmsLastMonth: number
-  avgConsumption: number
-  avgKmPerDay: number
-  maintenanceCostLastMonth: number
-  monthlyKms: { label: string, value: number, reference: number }[]
-}
-
-// Ao contrario das medidas do modelo, tudo isto e de cada viatura: o VIN, os
-// quilometros e as datas nao se herdam do catalogo.
-interface Vehicle {
-  id: string
-  driver: string
-  // Separados para o logotipo sair da marca sem a adivinhar a partir da
-  // primeira palavra — "Land Rover Defender" daria "Land".
-  brand: string
-  model: string
-  plate: string
-  status: string
-  vin: string
-  registered: string
-  nextInspection: string
-  insurer: string
-  insuranceRenewal: string
-  odometer: string
-  maintenances: Maintenance[]
-  stats: VehicleStats
-  alert?: boolean
-  online?: boolean
-}
-
-const groups: { label: string, items: Vehicle[] }[] = [
-  {
-    label: 'Favoritos',
-    items: [
-    ],
-  },
-  {
-    label: 'Motociclos',
-    items: [
-      {
-        id: '236-542-010',
-        driver: 'Pedro Torrezão',
-        brand: 'Yamaha',
-        model: 'Tenere',
-        plate: 'BA-07-NT',
-        status: 'A caminho',
-        online: true,
-        vin: 'JYARM09E4LA004178',
-        registered: '15/06/2021',
-        nextInspection: '15/06/2027',
-        insurer: 'Fidelidade',
-        insuranceRenewal: '01/09/2026',
-        odometer: '24 780 km',
-        maintenances: [
-          { date: '12/09/2026', odometer: '24 650 km', workshop: 'Auto Serviço Silva', description: 'Troca de óleo e filtros', cost: '85,00', type: 'preventiva' },
-          { date: '28/08/2026', odometer: '24 420 km', workshop: 'Manutenção Total', description: 'Inspeção geral', cost: '45,00', type: 'preventiva' },
-          { date: '15/06/2026', odometer: '23 980 km', workshop: 'Auto Serviço Silva', description: 'Reparação da correia', cost: '280,00', type: 'corretiva' },
-        ],
-        stats: {
-          kmsLastMonth: 850,
-          avgConsumption: 4.2,
-          avgKmPerDay: 28.3,
-          maintenanceCostLastMonth: 130,
-          monthlyKms: [
-            { label: 'Set 25', value: 720, reference: 775 },
-            { label: 'Out 25', value: 820, reference: 775 },
-            { label: 'Nov 25', value: 680, reference: 775 },
-            { label: 'Dez 25', value: 620, reference: 775 },
-            { label: 'Jan 26', value: 750, reference: 775 },
-            { label: 'Fev 26', value: 690, reference: 775 },
-            { label: 'Mar 26', value: 810, reference: 775 },
-            { label: 'Abr 26', value: 740, reference: 775 },
-            { label: 'Mai 26', value: 920, reference: 775 },
-            { label: 'Jun 26', value: 880, reference: 775 },
-            { label: 'Jul 26', value: 760, reference: 775 },
-            { label: 'Ago 26', value: 850, reference: 775 },
-          ],
-        },
-      },
-    ],
-  },
-  {
-    label: 'Ligeiros',
-    items: [
-      {
-        id: '236-542-008',
-        driver: 'Pedro Torrezão',
-        brand: 'Seat',
-        model: 'Ateca',
-        plate: '51-VM-88',
-        status: 'A caminho',
-        online: true,
-        vin: 'VSSZZZ5FZM6031902',
-        registered: '03/03/2021',
-        nextInspection: '03/03/2027',
-        insurer: 'Tranquilidade',
-        insuranceRenewal: '20/11/2026',
-        odometer: '68 450 km',
-        maintenances: [
-          { date: '20/09/2026', odometer: '68 320 km', workshop: 'Pneus & Alinhamento Pro', description: 'Alinhamento de rodas', cost: '120,00', type: 'preventiva' },
-          { date: '05/09/2026', odometer: '68 150 km', workshop: 'Auto Serviço Central', description: 'Substituição de pastilhas de travão', cost: '195,00', type: 'corretiva' },
-        ],
-        stats: {
-          kmsLastMonth: 1450,
-          avgConsumption: 6.8,
-          avgKmPerDay: 48.3,
-          maintenanceCostLastMonth: 315,
-          monthlyKms: [
-            { label: 'Set 25', value: 1380, reference: 1450 },
-            { label: 'Out 25', value: 1520, reference: 1450 },
-            { label: 'Nov 25', value: 1290, reference: 1450 },
-            { label: 'Dez 25', value: 1100, reference: 1450 },
-            { label: 'Jan 26', value: 1450, reference: 1450 },
-            { label: 'Fev 26', value: 1320, reference: 1450 },
-            { label: 'Mar 26', value: 1680, reference: 1450 },
-            { label: 'Abr 26', value: 1580, reference: 1450 },
-            { label: 'Mai 26', value: 1750, reference: 1450 },
-            { label: 'Jun 26', value: 1620, reference: 1450 },
-            { label: 'Jul 26', value: 1480, reference: 1450 },
-            { label: 'Ago 26', value: 1450, reference: 1450 },
-          ],
-        },
-      },
-      {
-        id: '236-542-009',
-        driver: 'Pedro Torrezão',
-        brand: 'Smart',
-        model: 'ForTwo',
-        plate: '83-ZG-44',
-        status: 'A caminho',
-        online: true,
-        vin: 'WME4513911K447203',
-        registered: '22/09/2012',
-        nextInspection: '22/09/2026',
-        insurer: 'Ageas',
-        insuranceRenewal: '05/02/2027',
-        odometer: '112 300 km',
-        maintenances: [
-          { date: '10/09/2026', odometer: '112 250 km', workshop: 'Smart Care Center', description: 'Inspeção geral', cost: '65,00', type: 'preventiva' },
-          { date: '15/08/2026', odometer: '112 080 km', workshop: 'Clima Auto', description: 'Limpeza do sistema de ar', cost: '40,00', type: 'preventiva' },
-        ],
-        stats: {
-          kmsLastMonth: 620,
-          avgConsumption: 5.1,
-          avgKmPerDay: 20.7,
-          maintenanceCostLastMonth: 105,
-          monthlyKms: [
-            { label: 'Set 25', value: 580, reference: 560 },
-            { label: 'Out 25', value: 620, reference: 560 },
-            { label: 'Nov 25', value: 490, reference: 560 },
-            { label: 'Dez 25', value: 420, reference: 560 },
-            { label: 'Jan 26', value: 550, reference: 560 },
-            { label: 'Fev 26', value: 480, reference: 560 },
-            { label: 'Mar 26', value: 640, reference: 560 },
-            { label: 'Abr 26', value: 510, reference: 560 },
-            { label: 'Mai 26', value: 680, reference: 560 },
-            { label: 'Jun 26', value: 590, reference: 560 },
-            { label: 'Jul 26', value: 560, reference: 560 },
-            { label: 'Ago 26', value: 620, reference: 560 },
-          ],
-        },
-      },
-    ],
-  },
-]
-
-const query = ref('')
-const selectedId = ref('236-542-010')
-
-const allVehicles = computed(() => groups.flatMap(group => group.items))
-const selected = computed(() => allVehicles.value.find(v => v.id === selectedId.value) ?? allVehicles.value[0])
-
-function slugify(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-}
-
-function fullName(vehicle: Vehicle) {
-  return `${vehicle.brand} ${vehicle.model}`
-}
-
-// As imagens saem do nome, para acrescentar um veiculo ser so pousar os
-// ficheiros com o nome certo. Em falta, mostra-se um marcador de posicao.
-function photoFor(vehicle: Vehicle) {
-  return `/vehicles/${slugify(fullName(vehicle))}.png`
-}
-
-function logoFor(vehicle: Vehicle) {
-  return `/brands/${slugify(vehicle.brand)}.png`
-}
-
-const photo = computed(() => photoFor(selected.value))
-
-const visibleGroups = computed(() => {
-  const term = query.value.trim().toLowerCase()
-  if (!term) { return groups }
-  return groups
-    .map(group => ({
-      ...group,
-      items: group.items.filter(v =>
-        fullName(v).toLowerCase().includes(term) || v.plate.toLowerCase().includes(term),
-      ),
-    }))
-    .filter(group => group.items.length > 0)
-})
-
-function formatConsumption(value: number) {
-  return `${value.toFixed(1)} l/100km`
-}
-
-function formatKms(value: number) {
-  return value.toLocaleString('pt-PT') + ' km'
-}
-
-function formatCost(value: number) {
-  return value.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })
-}
+const {
+  visibleGroups,
+  query,
+  selectedId,
+  selected,
+  photo,
+  fullName,
+  logoFor,
+  formatConsumption,
+  formatKms,
+  formatCost,
+} = useVehicles()
 
 </script>
 
@@ -255,7 +38,7 @@ function formatCost(value: number) {
       </ZEntityGroup>
 
       <p v-if="visibleGroups.length === 0" class="side__empty">
-        Nenhum veículo corresponde a “{{ query }}”.
+        Nenhum veículo corresponde a "{{ query }}".
       </p>
     </div>
 
@@ -413,8 +196,6 @@ function formatCost(value: number) {
   min-width: 0;
 }
 
-/* O VIN tem 17 caracteres seguidos: numa coluna estreita nao ha onde
-   partir e transbordava para cima do campo ao lado. */
 .facts__wide {
   grid-column: 1 / -1;
 }
@@ -457,7 +238,6 @@ function formatCost(value: number) {
   position: relative;
 }
 
-/* Linha vertical central */
 .maintenance__timeline::before {
   content: '';
   position: absolute;

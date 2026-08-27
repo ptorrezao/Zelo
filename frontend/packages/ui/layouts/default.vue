@@ -1,0 +1,72 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+
+const breadcrumbs = computed(() => {
+  const parts = route.path.split('/').filter(Boolean)
+  if (parts.length === 0) {
+    return [{ label: 'Home', href: '/', isLast: true }]
+  }
+  const appName = parts[0]
+  return [
+    { label: 'Home', href: '/' },
+    { label: appName.charAt(0).toUpperCase() + appName.slice(1), href: `/${appName}`, isLast: true },
+  ]
+})
+
+const navItems = [
+  { label: 'Início', path: '/', icon: '⌂' },
+  { label: 'Auto', path: '/auto', icon: '◆' },
+  { label: 'Inventário', path: '/inventory', icon: '≡' },
+]
+
+const isActive = (path: string) => route.path.startsWith(path)
+const handleLogout = () => router.push('/login')
+</script>
+
+<template>
+  <div>
+    <aside>
+      <div>
+        <div>Z</div>
+      </div>
+      <nav>
+        <button
+          v-for="item in navItems"
+          :key="item.path"
+          :class="{ active: isActive(item.path) }"
+          @click="router.push(item.path)"
+        >
+          <span>{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </button>
+      </nav>
+      <div>
+        <button @click="handleLogout">
+          <span>↗</span>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <div>
+      <nav>
+        <ol>
+          <li v-for="(item, index) in breadcrumbs" :key="index">
+            <a v-if="!item.isLast" :href="item.href">{{ item.label }}</a>
+            <span v-else>{{ item.label }}</span>
+            <span v-if="index < breadcrumbs.length - 1" aria-hidden="true">/</span>
+          </li>
+        </ol>
+      </nav>
+      <div>
+        <Transition name="page" mode="out-in">
+          <slot :key="route.path" />
+        </Transition>
+      </div>
+    </div>
+  </div>
+</template>

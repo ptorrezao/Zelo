@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import Button from '@zelo/ui/components/ui/Button.vue'
 import Card from '@zelo/ui/components/ui/Card.vue'
 import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
@@ -13,10 +14,25 @@ import { useVehicles } from '../composables/useVehicles'
 const { selected } = useVehicles()
 
 const typeColor: Record<string, string> = {
-  Preventiva: 'bg-primary',
-  Correctiva: 'bg-amber-500',
-  Inspeção: 'bg-emerald-500',
+  preventiva: 'bg-primary',
+  corretiva: 'bg-amber-500',
+  inspecao: 'bg-emerald-500',
 }
+
+const typeLabel: Record<string, string> = {
+  preventiva: 'Preventiva',
+  corretiva: 'Corretiva',
+  inspecao: 'Inspeção',
+}
+
+const VISIBLE_LIMIT = 3
+const expanded = ref(false)
+
+const maintenances = computed(() => selected.value?.maintenances ?? [])
+const hasMore = computed(() => maintenances.value.length > VISIBLE_LIMIT)
+const visibleMaintenances = computed(() =>
+  expanded.value ? maintenances.value : maintenances.value.slice(0, VISIBLE_LIMIT),
+)
 </script>
 
 <template>
@@ -28,21 +44,24 @@ const typeColor: Record<string, string> = {
     <CardContent>
       <Timeline>
         <TimelineItem
-          v-for="(entry, index) in selected?.maintenances"
+          v-for="(entry, index) in visibleMaintenances"
           :key="entry.date"
-          :is-last="index === selected!.maintenances.length - 1"
+          :is-last="index === visibleMaintenances.length - 1"
         >
-          <TimelineIndicator :is-last="index === selected!.maintenances.length - 1" :class="typeColor[entry.type] || 'bg-muted-foreground'" />
+          <TimelineIndicator
+            :is-last="index === visibleMaintenances.length - 1"
+            :class="typeColor[entry.type] || 'bg-muted-foreground'"
+          />
           <TimelineContent>
             <div class="mb-1 flex items-center justify-between">
               <span class="text-sm font-semibold">{{ entry.date }}</span>
               <span
                 :class="[
-                  'rounded px-2 py-0.5 text-xs font-semibold capitalize text-white',
+                  'rounded px-2 py-0.5 text-xs font-semibold text-white',
                   typeColor[entry.type] || 'bg-muted-foreground',
                 ]"
               >
-                {{ entry.type }}
+                {{ typeLabel[entry.type] || entry.type }}
               </span>
             </div>
             <p class="mb-1 text-sm font-medium">{{ entry.description }}</p>
@@ -54,6 +73,16 @@ const typeColor: Record<string, string> = {
           </TimelineContent>
         </TimelineItem>
       </Timeline>
+
+      <Button
+        v-if="hasMore"
+        variant="ghost"
+        size="sm"
+        class="mt-4 w-full text-muted-foreground"
+        @click="expanded = !expanded"
+      >
+        {{ expanded ? 'Ver menos' : `Ver mais (${maintenances.length - VISIBLE_LIMIT})` }}
+      </Button>
     </CardContent>
   </Card>
 </template>

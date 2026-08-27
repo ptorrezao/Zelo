@@ -18,14 +18,14 @@ const { selected, photo, fullName } = useVehicles()
       v-if="photo"
       :src="photo"
       :alt="fullName(selected)"
-      class="pointer-events-none absolute inset-y-0 right-0 w-1/2 object-cover object-right opacity-40"
+      class="pointer-events-none absolute inset-y-0 right-0 h-full w-1/2 object-cover object-center opacity-60"
     />
-    <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-card via-card/80 to-transparent"></div>
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-card from-0% via-transparent via-45% to-transparent"></div>
 
     <CardHeader class="relative">
       <CardTitle>{{ fullName(selected) }}</CardTitle>
     </CardHeader>
-    <CardContent class="relative max-w-[65%] sm:max-w-[60%]">
+    <CardContent class="relative max-w-[45%]">
       <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="flex flex-col gap-1">
           <span class="text-xs font-semibold uppercase text-muted-foreground">VIN</span>
@@ -54,7 +54,7 @@ const { selected, photo, fullName } = useVehicles()
       </div>
 
       <div class="flex items-center gap-4 border-y border-border py-4">
-        <LicensePlate v-if="selected?.plate" :value="selected.plate" />
+        <LicensePlate v-if="selected?.plate" :value="selected.plate" class="shrink-0" />
         <a href="#documentos" class="text-sm font-medium text-primary hover:underline">Documentos</a>
       </div>
     </CardContent>

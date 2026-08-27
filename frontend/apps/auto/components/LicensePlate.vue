@@ -83,8 +83,8 @@ const starPath = 'M12 2.67 12.3 3.59 13.27 3.59 12.49 4.16 12.78 5.08 12 4.51 11
 .plate__number {
   display: flex;
   align-items: center;
-  gap: calc(var(--plate-h) * 0.23);
-  padding: 0 calc(var(--plate-h) * 0.23);
+  gap: calc(var(--plate-h) * 0.12);
+  padding: 0 calc(var(--plate-h) * 0.18);
   font-size: calc(var(--plate-h) * 0.5);
   font-weight: 700;
   letter-spacing: 0.04em;

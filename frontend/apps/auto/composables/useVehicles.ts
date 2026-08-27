@@ -27,8 +27,10 @@ const vehicleGroups: VehicleGroup[] = [
         odometer: '24 780 km',
         maintenances: [
           { date: '12/09/2026', odometer: '24 650 km', workshop: 'Auto Serviço Silva', description: 'Troca de óleo e filtros', cost: '85,00', type: 'preventiva' },
-          { date: '28/08/2026', odometer: '24 420 km', workshop: 'Manutenção Total', description: 'Inspeção geral', cost: '45,00', type: 'preventiva' },
+          { date: '28/08/2026', odometer: '24 420 km', workshop: 'Manutenção Total', description: 'Inspeção periódica', cost: '45,00', type: 'inspecao' },
           { date: '15/06/2026', odometer: '23 980 km', workshop: 'Auto Serviço Silva', description: 'Reparação da correia', cost: '280,00', type: 'corretiva' },
+          { date: '02/03/2026', odometer: '22 100 km', workshop: 'Manutenção Total', description: 'Substituição de pneus', cost: '340,00', type: 'preventiva' },
+          { date: '18/11/2025', odometer: '20 340 km', workshop: 'Auto Serviço Silva', description: 'Troca de pastilhas de travão', cost: '95,00', type: 'corretiva' },
         ],
         stats: {
           kmsLastMonth: 850,
@@ -73,6 +75,8 @@ const vehicleGroups: VehicleGroup[] = [
         maintenances: [
           { date: '20/09/2026', odometer: '68 320 km', workshop: 'Pneus & Alinhamento Pro', description: 'Alinhamento de rodas', cost: '120,00', type: 'preventiva' },
           { date: '05/09/2026', odometer: '68 150 km', workshop: 'Auto Serviço Central', description: 'Substituição de pastilhas de travão', cost: '195,00', type: 'corretiva' },
+          { date: '22/06/2026', odometer: '66 800 km', workshop: 'Pneus & Alinhamento Pro', description: 'Inspeção periódica', cost: '50,00', type: 'inspecao' },
+          { date: '10/02/2026', odometer: '64 200 km', workshop: 'Auto Serviço Central', description: 'Troca de óleo e filtros', cost: '110,00', type: 'preventiva' },
         ],
         stats: {
           kmsLastMonth: 1450,
@@ -110,8 +114,9 @@ const vehicleGroups: VehicleGroup[] = [
         insuranceRenewal: '05/02/2027',
         odometer: '112 300 km',
         maintenances: [
-          { date: '10/09/2026', odometer: '112 250 km', workshop: 'Smart Care Center', description: 'Inspeção geral', cost: '65,00', type: 'preventiva' },
+          { date: '10/09/2026', odometer: '112 250 km', workshop: 'Smart Care Center', description: 'Inspeção periódica', cost: '65,00', type: 'inspecao' },
           { date: '15/08/2026', odometer: '112 080 km', workshop: 'Clima Auto', description: 'Limpeza do sistema de ar', cost: '40,00', type: 'preventiva' },
+          { date: '30/04/2026', odometer: '109 500 km', workshop: 'Smart Care Center', description: 'Reparação do sistema elétrico', cost: '210,00', type: 'corretiva' },
         ],
         stats: {
           kmsLastMonth: 620,

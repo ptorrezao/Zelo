@@ -4,7 +4,7 @@ export interface Maintenance {
   workshop: string
   description: string
   cost: string
-  type: 'preventiva' | 'corretiva'
+  type: 'preventiva' | 'corretiva' | 'inspecao'
 }
 
 export interface VehicleStats {

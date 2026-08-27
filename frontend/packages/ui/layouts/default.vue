@@ -5,7 +5,7 @@
 // O flex aceita as duas composicoes sem variantes de layout.
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import Navigation from '../components/shadcn/Navigation.vue'
+import Sidebar from '../components/shadcn/Sidebar.vue'
 
 const route = useRoute()
 
@@ -30,7 +30,7 @@ const breadcrumbs = computed(() => {
 
 <template>
   <div class="z-shell">
-    <Navigation />
+    <Sidebar />
     <div class="z-shell__wrapper">
       <nav class="z-breadcrumb" aria-label="Breadcrumb">
         <ol class="z-breadcrumb__list">

@@ -40,8 +40,6 @@ const {
     </ZSidePanel>
  <ZWorkspace>
     <div class="main__content">
-
-
       <ZPanel>
         <ZPageHeader :title="selected.driver" :subtitle="`ID: ${selected.id}`" :avatar-name="selected.driver" />
       </ZPanel>
@@ -49,7 +47,6 @@ const {
         <div class="hero">
           <div class="hero__facts">
             <h2 class="hero__model">{{ fullName(selected) }}</h2>
-
             <ZStatGroup :columns="2">
               <ZStat class="facts__wide" label="VIN" :value="selected.vin" />
               <ZStat label="Data de matrícula" :value="selected.registered" />
@@ -64,7 +61,6 @@ const {
               <a class="hero__docs" href="#documentos">Documentos</a>
             </div>
           </div>
-
           <VehiclePhoto :src="photo" :alt="fullName(selected)" />
         </div>
       </ZPanel>

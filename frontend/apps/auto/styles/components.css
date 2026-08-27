@@ -24,8 +24,6 @@
   justify-content: space-between;
   gap: var(--auto-hero-gap);
   flex-wrap: wrap;
-  margin-top: var(--auto-section-gap);
-  padding: var(--auto-hero-padding);
   background: var(--z-color-surface);
   border-radius: var(--z-radius-lg);
 }

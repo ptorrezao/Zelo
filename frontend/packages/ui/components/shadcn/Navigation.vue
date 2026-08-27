@@ -24,7 +24,7 @@ const navItems = [
 <template>
   <nav class="nav-rail" @mouseenter="expanded = true" @mouseleave="expanded = false">
     <!-- Logo -->
-    <div class="nav-logo">Z</div>
+    <div class="nav-logo">Zelo</div>
 
     <!-- Navigation Items -->
     <div class="nav-items">
@@ -237,9 +237,21 @@ const navItems = [
     padding: 0 1rem;
   }
 
+  .nav-rail:hover {
+    width: 100%;
+    padding: 0 1rem;
+  }
+
   .nav-logo {
     margin-bottom: 0;
     margin-right: 2rem;
+    width: auto;
+    font-size: 1rem;
+  }
+
+  .nav-rail:hover .nav-logo {
+    font-size: 1rem;
+    padding-left: 0;
   }
 
   .nav-items {
@@ -247,6 +259,20 @@ const navItems = [
     gap: 1rem;
     flex: 1;
     justify-content: flex-start;
+  }
+
+  .nav-rail:hover .nav-items {
+    align-items: center;
+  }
+
+  .nav-item {
+    width: 40px;
+    height: 40px;
+  }
+
+  .nav-rail:hover .nav-item {
+    width: 40px;
+    padding: 0;
   }
 
   .nav-item.active::after {
@@ -262,6 +288,21 @@ const navItems = [
 
   .nav-footer {
     margin-left: auto;
+    flex-direction: row;
+  }
+
+  .nav-rail:hover .nav-footer {
+    align-items: center;
+  }
+
+  .nav-user {
+    width: 40px;
+    height: 40px;
+  }
+
+  .nav-rail:hover .nav-user {
+    width: 40px;
+    padding: 0;
   }
 }
 </style>

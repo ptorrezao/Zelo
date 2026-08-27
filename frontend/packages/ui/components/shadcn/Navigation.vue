@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
-import SAvatar from './Avatar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -14,92 +13,98 @@ const handleLogout = () => {
 }
 
 const navItems = [
-  { label: 'Início', path: '/', icon: '🏠' },
-  { label: 'Auto', path: '/auto', icon: '🚗' },
-  { label: 'Inventário', path: '/inventory', icon: '📦' },
+  { label: 'Início', path: '/', icon: '⌂' },
+  { label: 'Auto', path: '/auto', icon: '◆' },
+  { label: 'Inventário', path: '/inventory', icon: '≡' },
 ]
 </script>
 
 <template>
   <nav class="nav-rail">
-    <div class="nav-header">
-      <h1 class="nav-logo">Zelo</h1>
-    </div>
+    <!-- Logo -->
+    <div class="nav-logo">Z</div>
 
+    <!-- Navigation Items -->
     <div class="nav-items">
       <button
         v-for="item in navItems"
         :key="item.path"
         :class="['nav-item', { active: isActive(item.path) }]"
+        :title="item.label"
         @click="router.push(item.path)"
       >
         <span class="nav-icon">{{ item.icon }}</span>
-        <span class="nav-label">{{ item.label }}</span>
       </button>
     </div>
 
+    <!-- Footer User -->
     <div class="nav-footer">
-      <div class="nav-user">
-        <SAvatar initials="U" class="user-avatar" />
-        <div class="user-info">
-          <span class="user-email">user@example.com</span>
-          <button class="logout-btn" @click="handleLogout">Logout</button>
-        </div>
-      </div>
+      <button class="nav-user" :title="'Logout'" @click="handleLogout">
+        <span class="user-icon">↗</span>
+      </button>
     </div>
   </nav>
 </template>
 
 <style scoped>
 .nav-rail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 64px;
+  height: 100vh;
+  background: #1a1a1a;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  width: 240px;
-  background: #1f1f1f;
-  color: white;
-  padding: 1.5rem 1rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.nav-header {
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 1.5rem;
+  align-items: center;
+  padding: 1rem 0;
+  z-index: 1000;
 }
 
 .nav-logo {
-  margin: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.5rem;
   font-weight: 700;
   color: #0066cc;
+  margin-bottom: 2rem;
+  cursor: pointer;
+}
+
+.nav-logo:hover {
+  opacity: 0.8;
 }
 
 .nav-items {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
+  align-items: center;
 }
 
 .nav-item {
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
+  justify-content: center;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all 0.2s ease;
-  text-align: left;
-  font-size: 0.95rem;
+  position: relative;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .nav-item.active {
@@ -107,117 +112,106 @@ const navItems = [
   color: white;
 }
 
-.nav-icon {
-  flex: none;
-  font-size: 1.25rem;
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  width: 4px;
+  height: 20px;
+  background: #0066cc;
+  border-radius: 0 4px 4px 0;
 }
 
-.nav-label {
-  flex: 1;
+.nav-icon {
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-footer {
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
 }
 
 .nav-user {
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background: rgba(0, 102, 204, 0.1);
-}
-
-:deep(.user-avatar) {
-  flex: none;
-  width: 32px;
-  height: 32px;
-}
-
-.user-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.user-email {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.logout-btn {
-  font-size: 0.75rem;
-  color: #0066cc;
-  background: none;
+  justify-content: center;
   border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  padding: 0;
-  text-decoration: none;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
+  font-size: 1.2rem;
 }
 
-.logout-btn:hover {
-  color: #0052a3;
-  text-decoration: underline;
+.nav-user:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.user-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Adjust main layout to account for fixed nav */
+:global(.z-shell) {
+  margin-left: 64px;
+  height: calc(100vh - 64px);
 }
 
 @media (max-width: 900px) {
   .nav-rail {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 64px;
     flex-direction: row;
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .nav-header {
-    padding-right: 1.5rem;
-    padding-bottom: 0;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    border-bottom: none;
-    margin-right: 1.5rem;
-    margin-bottom: 0;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 1rem;
   }
 
   .nav-logo {
-    font-size: 1.25rem;
+    margin-bottom: 0;
+    margin-right: 2rem;
   }
 
   .nav-items {
     flex-direction: row;
-    gap: 0.5rem;
+    gap: 1rem;
     flex: 1;
+    justify-content: flex-start;
   }
 
-  .nav-item {
-    justify-content: center;
-    width: 50px;
-    padding: 0.75rem;
-  }
-
-  .nav-label {
-    display: none;
+  .nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    right: auto;
+    width: 20px;
+    height: 4px;
+    background: #0066cc;
+    border-radius: 0 0 4px 4px;
   }
 
   .nav-footer {
-    padding-left: 1.5rem;
-    padding-top: 0;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    border-top: none;
+    margin-left: auto;
   }
 
-  .nav-user {
-    flex-direction: column;
-  }
-
-  .user-info {
-    display: none;
+  :global(.z-shell) {
+    margin-left: 0;
+    margin-top: 64px;
+    height: calc(100vh - 64px);
   }
 }
 </style>

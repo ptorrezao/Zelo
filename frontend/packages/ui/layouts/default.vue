@@ -58,7 +58,8 @@ const breadcrumbs = computed(() => {
 .z-shell {
   display: flex;
   gap: var(--z-space-3);
-  height: 100vh;
+  height: calc(100vh - 64px);
+  margin-left: 64px;
   padding: var(--z-space-3);
   box-sizing: border-box;
   background: var(--z-color-page);

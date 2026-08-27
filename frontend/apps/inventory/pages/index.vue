@@ -1,66 +1,85 @@
 <script setup lang="ts">
 import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
-import DetailGrid from '@zelo/ui/components/shadcn/DetailGrid.vue'
+import Container from '@zelo/ui/components/shadcn/Container.vue'
+import Panel from '@zelo/ui/components/shadcn/Panel.vue'
+import SButton from '@zelo/ui/components/shadcn/Button.vue'
+import SInput from '@zelo/ui/components/shadcn/Input.vue'
 
-const title = 'Inventory'
-const subtitle = 'Manage your inventory items'
+const title = 'Inventário'
+const subtitle = 'Gerencie seus artigos'
 </script>
 
 <template>
-  <ZWorkspace>
-    <div class="inventory__wrapper">
-      <ZPanel>
-        <PageHeader
-          :title="title"
-          :subtitle="subtitle"
-          avatar-name="Inventory"
-        />
-      </ZPanel>
+  <Container>
+    <PageHeader :title="title" :subtitle="subtitle" avatar-name="INV" />
 
-      <DetailGrid>
-        <ZPanel title="Items">
-          <p class="inventory__empty">
-            Nenhum artigo registado. Comece por adicionar um novo artigo.
-          </p>
-        </ZPanel>
+    <div class="inventory-grid">
+      <Panel title="Artigos">
+        <p class="empty-state">
+          Nenhum artigo registado. Comece por adicionar um novo artigo.
+        </p>
+      </Panel>
 
-        <ZPanel title="Add Item">
-          <div class="inventory__form">
-            <ZInput label="Designação" placeholder="Nome do artigo" />
-            <ZInput label="Localização" placeholder="Onde está guardado" />
+      <Panel title="Adicionar Artigo">
+        <div class="form-fields">
+          <div class="form-group">
+            <label class="form-label">Designação</label>
+            <SInput placeholder="Nome do artigo" />
           </div>
-          <div class="inventory__actions">
-            <ZButton variant="primary">Guardar</ZButton>
+          <div class="form-group">
+            <label class="form-label">Localização</label>
+            <SInput placeholder="Onde está guardado" />
           </div>
-        </ZPanel>
-      </DetailGrid>
+        </div>
+        <div class="form-actions">
+          <SButton variant="default">Guardar</SButton>
+        </div>
+      </Panel>
     </div>
-  </ZWorkspace>
+  </Container>
 </template>
 
 <style scoped>
-.inventory__wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: var(--z-space-6);
+.inventory-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
 }
 
-.inventory__empty {
+@media (max-width: 900px) {
+  .inventory-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.empty-state {
   margin: 0;
-  font-size: var(--z-font-size-sm);
-  color: var(--z-color-text-muted);
+  font-size: 0.9rem;
+  color: #666;
   line-height: 1.6;
 }
 
-.inventory__form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
-  gap: var(--z-space-4);
-  margin-bottom: var(--z-space-4);
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.inventory__actions {
+.form-group {
   display: flex;
-  gap: var(--z-space-3);
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
 }
 </style>

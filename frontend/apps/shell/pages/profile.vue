@@ -1,81 +1,133 @@
 <script setup lang="ts">
 import { useAuth } from '../composables/useAuth'
 import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
-import DetailGrid from '@zelo/ui/components/shadcn/DetailGrid.vue'
+import Container from '@zelo/ui/components/shadcn/Container.vue'
+import Panel from '@zelo/ui/components/shadcn/Panel.vue'
+import SButton from '@zelo/ui/components/shadcn/Button.vue'
 
 const { user } = useAuth()
 </script>
 
 <template>
-  <ZWorkspace>
-    <div class="profile__wrapper">
-      <ZPanel>
-        <PageHeader
-          title="Account Settings"
-          subtitle="Manage your profile information"
-          :avatar-name="user?.email || 'User'"
-        />
-      </ZPanel>
+  <Container>
+    <PageHeader
+      title="Definições de Conta"
+      subtitle="Gerencie sua informação de perfil"
+      :avatar-name="user?.email?.substring(0, 1).toUpperCase() || 'U'"
+    />
 
-      <DetailGrid>
-        <ZPanel title="Account Information">
-          <ZStatGroup :columns="1">
-            <ZStat label="Email Address" :value="user?.email || 'Not set'" />
-            <ZStat label="Account Status" value="Active" />
-            <ZStat label="Member Since" value="2024" />
-          </ZStatGroup>
-        </ZPanel>
+    <div class="profile-grid">
+      <Panel title="Informações da Conta">
+        <div class="info-list">
+          <div class="info-item">
+            <span class="label">Email</span>
+            <span class="value">{{ user?.email || 'Não definido' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Estado da Conta</span>
+            <span class="value">Ativo</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Membro desde</span>
+            <span class="value">2024</span>
+          </div>
+        </div>
+      </Panel>
 
-        <ZPanel title="Security">
-          <div class="profile__section">
-            <h3 class="profile__section-title">Password</h3>
-            <p class="profile__section-description">
-              Change your password regularly to keep your account secure.
+      <Panel title="Segurança">
+        <div class="security-section">
+          <div class="section-content">
+            <h3 class="section-title">Palavra-passe</h3>
+            <p class="section-description">
+              Altere a sua palavra-passe regularmente para manter a sua conta segura.
             </p>
-            <ZButton size="sm" variant="primary">Change Password</ZButton>
+            <SButton variant="default" size="sm">Alterar Palavra-passe</SButton>
           </div>
 
-          <div class="profile__section">
-            <h3 class="profile__section-title">Two-Factor Authentication</h3>
-            <p class="profile__section-description">
-              Add an extra layer of security to your account.
+          <div class="section-divider"></div>
+
+          <div class="section-content">
+            <h3 class="section-title">Autenticação de Dois Fatores</h3>
+            <p class="section-description">
+              Adicione uma camada extra de segurança à sua conta.
             </p>
-            <ZButton size="sm">Enable 2FA</ZButton>
+            <SButton variant="default" size="sm">Ativar 2FA</SButton>
           </div>
-        </ZPanel>
-      </DetailGrid>
+        </div>
+      </Panel>
     </div>
-  </ZWorkspace>
+  </Container>
 </template>
 
 <style scoped>
-.profile__wrapper {
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.info-list {
   display: flex;
   flex-direction: column;
-  gap: var(--z-space-6);
+  gap: 1.5rem;
 }
 
-.profile__section {
-  padding-bottom: var(--z-space-4);
-  border-bottom: 1px solid var(--z-color-border);
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.profile__section:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.profile__section-title {
-  margin: 0 0 var(--z-space-2);
-  font-size: var(--z-font-size-sm);
+.info-item .label {
+  font-size: 0.75rem;
+  color: #999;
+  text-transform: uppercase;
   font-weight: 600;
-  color: var(--z-color-text);
 }
 
-.profile__section-description {
-  margin: 0 0 var(--z-space-3);
-  font-size: var(--z-font-size-sm);
-  color: var(--z-color-text-muted);
+.info-item .value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.security-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.section-content {
+  padding: 1rem 0;
+}
+
+.section-content:first-child {
+  padding-top: 0;
+}
+
+.section-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 0;
+}
+
+.section-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.section-description {
+  margin: 0 0 1rem 0;
+  font-size: 0.85rem;
+  color: #666;
   line-height: 1.5;
 }
 </style>

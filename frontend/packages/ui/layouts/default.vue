@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Unico layout das apps Zelo. O rail de modulos e sempre o primeiro
-// elemento; a pagina preenche o resto com ZWorkspace, opcionalmente
-// precedido de ZSidePanel quando precisa de uma lista a esquerda.
+// elemento; a pagina preenche o resto com Container, opcionalmente
+// precedido de um sidebar quando precisa de uma lista a esquerda.
 // O flex aceita as duas composicoes sem variantes de layout.
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'

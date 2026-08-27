@@ -1,203 +1,216 @@
 <script setup lang="ts">
 import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
-import DetailGrid from '@zelo/ui/components/shadcn/DetailGrid.vue'
+import Container from '@zelo/ui/components/shadcn/Container.vue'
+import Panel from '@zelo/ui/components/shadcn/Panel.vue'
+import SButton from '@zelo/ui/components/shadcn/Button.vue'
 
-interface Component {
-  name: string
-  description: string
-  route?: string
-}
-
-const components: Component[] = [
-  { name: 'ZButton', description: 'Botão com variantes (primary, secondary)' },
-  { name: 'ZStatusBadge', description: 'Badge de status com labels e alertas' },
-  { name: 'ZInput', description: 'Campo de entrada de texto' },
-  { name: 'ZSearchInput', description: 'Campo de pesquisa com ícone' },
-  { name: 'ZPanel', description: 'Painel/card para agrupar conteúdo' },
-  { name: 'ZSidePanel', description: 'Painel lateral (sidebar)' },
-  { name: 'ZWorkspace', description: 'Container principal do layout' },
-  { name: 'PageHeader (shadcn)', description: 'Cabeçalho de página com avatar e título' },
-  { name: 'DetailGrid (shadcn)', description: 'Grid responsivo para cards' },
-  { name: 'ZNavRail', description: 'Navegação vertical com módulos' },
-  { name: 'ZAvatar', description: 'Avatar com iniciais ou imagem' },
-  { name: 'ZStat', description: 'Exibição de estatística com label e valor' },
-  { name: 'ZStatGroup', description: 'Grupo de estatísticas em grid' },
+const stats = [
+  { label: 'Total de veículos', value: '3' },
+  { label: 'Quilómetros este mês', value: '2.145 km' },
+  { label: 'Custos manutenção', value: '€ 445.00' },
+  { label: 'Próxima inspeção', value: '15/06/2027' },
 ]
 </script>
 
 <template>
-  <ZWorkspace>
-    <ZPanel title="Manual de Componentes">
-      <p class="lead">
-        Explore os componentes disponíveis no layer partilhado (@zelo/ui).
-        Clique em cada componente para ver exemplos de uso.
-      </p>
-    </ZPanel>
+  <Container>
+    <PageHeader
+      title="Bem-vindo ao Zelo"
+      subtitle="Seu gerenciador de frota pessoal"
+      avatar-name="PT"
+    />
 
-   
-    <div class="components-showcase">
-      
-      <ZPanel title="ZButton">
-        <p class="component-description">Botão com variantes</p>
-        <div class="demo">
-          <ZButton variant="primary">Primário</ZButton>
-          <ZButton>Secundário</ZButton>
-          <ZButton size="sm">Pequeno</ZButton>
-          <ZButton disabled>Desativado</ZButton>
+    <div class="home-grid">
+      <Panel title="Visão Geral">
+        <div class="overview-content">
+          <p class="intro-text">
+            Zelo é uma aplicação para gerenciar sua frota pessoal de veículos.
+            Acompanhe manutenção, quilometragem, custos e muito mais.
+          </p>
+          <div class="cta-buttons">
+            <SButton variant="default">Ver Veículos</SButton>
+            <SButton variant="default">Novo Veículo</SButton>
+          </div>
         </div>
-      </ZPanel>
+      </Panel>
 
-      <ZPanel title="ZStatusBadge">
-        <p class="component-description">Badge de status com alertas</p>
-        <div class="demo">
-          <ZStatusBadge label="A caminho" />
-          <ZStatusBadge label="Em espera" alert />
-          <ZStatusBadge label="Concluído" />
+      <Panel title="Estatísticas">
+        <div class="stats-list">
+          <div v-for="stat in stats" :key="stat.label" class="stat-item">
+            <span class="stat-label">{{ stat.label }}</span>
+            <span class="stat-value">{{ stat.value }}</span>
+          </div>
         </div>
-      </ZPanel>
+      </Panel>
 
-      <ZPanel title="ZInput">
-        <p class="component-description">Campo de entrada de texto</p>
-        <ZInput placeholder="Campo de texto" />
-      </ZPanel>
-
-      <ZPanel title="ZSearchInput">
-        <p class="component-description">Campo de pesquisa</p>
-        <ZSearchInput placeholder="Procurar..." />
-      </ZPanel>
-
-      <ZPanel title="ZAvatar">
-        <p class="component-description">Avatar com iniciais</p>
-        <div class="demo">
-          <ZAvatar name="PT" size="md" />
-          <ZAvatar name="JS" size="md" />
-          <ZAvatar name="MS" size="md" />
+      <Panel title="Aplicações">
+        <div class="apps-grid">
+          <div class="app-card">
+            <div class="app-icon">◆</div>
+            <h3 class="app-name">Auto</h3>
+            <p class="app-description">Gerencie seus veículos</p>
+          </div>
+          <div class="app-card">
+            <div class="app-icon">≡</div>
+            <h3 class="app-name">Inventário</h3>
+            <p class="app-description">Organize seus artigos</p>
+          </div>
         </div>
-      </ZPanel>
+      </Panel>
 
-      <ZPanel title="ZStat">
-        <p class="component-description">Exibição de estatística</p>
-        <ZStat label="Total de veículos" value="3" />
-        <div style="margin-top: var(--z-space-3)">
-          <ZStat label="Quilómetros" value="850 km" />
+      <Panel title="Recursos">
+        <div class="resources-list">
+          <a href="#" class="resource-link">
+            <span class="resource-icon">📖</span>
+            <div class="resource-content">
+              <h4 class="resource-title">Documentação</h4>
+              <p class="resource-description">Saiba mais sobre as funcionalidades</p>
+            </div>
+          </a>
+          <a href="#" class="resource-link">
+            <span class="resource-icon">⚙️</span>
+            <div class="resource-content">
+              <h4 class="resource-title">Definições</h4>
+              <p class="resource-description">Configure a sua conta</p>
+            </div>
+          </a>
         </div>
-      </ZPanel>
+      </Panel>
     </div>
-
-    <ZPanel title="PageHeader (shadcn)">
-      <p class="component-description">Cabeçalho de página com avatar e título</p>
-      <PageHeader
-        title="Pedro Torrezão"
-        subtitle="ID: 236-542-010"
-        avatar-name="PT"
-      />
-    </ZPanel>
-
-    <ZPanel title="DetailGrid (shadcn)">
-      <p class="component-description">Grid responsivo para cards</p>
-      <DetailGrid>
-        <ZPanel title="Card 1">
-          <p>Conteúdo do primeiro card</p>
-        </ZPanel>
-        <ZPanel title="Card 2">
-          <p>Conteúdo do segundo card</p>
-        </ZPanel>
-        <ZPanel title="Card 3">
-          <p>Conteúdo do terceiro card</p>
-        </ZPanel>
-      </DetailGrid>
-    </ZPanel>
-  </ZWorkspace>
+  </Container>
 </template>
 
 <style scoped>
-.lead {
-  margin: 0;
-  max-width: 60ch;
-  color: var(--z-color-text-muted);
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.intro-text {
+  margin: 0 0 1.5rem 0;
+  color: #666;
   line-height: 1.6;
+  font-size: 0.95rem;
 }
 
-.components-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--z-space-4);
-  margin-bottom: var(--z-space-6);
-}
-
-.component-card {
-  padding: var(--z-space-4);
-  border: 1px solid var(--z-color-border);
-  border-radius: var(--z-radius-md);
-  background: var(--z-color-background-secondary);
-  transition: all 0.2s ease;
-}
-
-.component-card:hover {
-  border-color: var(--z-color-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.component-header {
-  margin-bottom: var(--z-space-2);
-}
-
-.component-name {
-  margin: 0;
-  font-size: var(--z-font-size-base);
-  font-weight: 600;
-  color: var(--z-color-text);
-  font-family: 'Courier New', monospace;
-}
-
-.component-description {
-  margin: var(--z-space-2) 0;
-  font-size: var(--z-font-size-sm);
-  color: var(--z-color-text-muted);
-  line-height: 1.5;
-}
-
-.component-link {
-  display: inline-block;
-  margin-top: var(--z-space-2);
-  padding: var(--z-space-2) var(--z-space-3);
-  font-size: var(--z-font-size-sm);
-  color: var(--z-color-primary);
-  text-decoration: none;
-  border: 1px solid var(--z-color-primary);
-  border-radius: var(--z-radius-sm);
-  transition: all 0.2s ease;
-}
-
-.component-link:hover {
-  background: var(--z-color-primary);
-  color: white;
-}
-
-.demo-section {
-  margin-bottom: var(--z-space-6);
-}
-
-.demo-section h4 {
-  margin: 0 0 var(--z-space-3);
-  font-size: var(--z-font-size-sm);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--z-color-text-muted);
-}
-
-.demo {
+.cta-buttons {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--z-space-3);
+  gap: 0.75rem;
 }
 
-.components-showcase {
+.stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f9f9f9;
+  border-radius: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.stat-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.apps-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--z-space-4);
-  margin-bottom: var(--z-space-6);
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.app-card {
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.app-card:hover {
+  background: #f0f0f0;
+  transform: translateY(-2px);
+}
+
+.app-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.app-name {
+  margin: 0.5rem 0 0.25rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.app-description {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.resources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.resource-link {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.resource-link:hover {
+  background: #f0f0f0;
+}
+
+.resource-icon {
+  font-size: 1.5rem;
+  flex: none;
+}
+
+.resource-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.resource-description {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.overview-content {
+  display: flex;
+  flex-direction: column;
 }
 </style>

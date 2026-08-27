@@ -9,6 +9,10 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
+    "autoprefixer": "^10.5.4",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "tailwindcss-animate": "^1.0.7",
     "turbo": "^2.1.0",
     "typescript": "^5.6.0"
   },

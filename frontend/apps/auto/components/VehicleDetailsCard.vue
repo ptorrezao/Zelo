@@ -3,6 +3,7 @@ import Card from '@zelo/ui/components/ui/Card.vue'
 import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
 import CardTitle from '@zelo/ui/components/ui/CardTitle.vue'
 import CardContent from '@zelo/ui/components/ui/CardContent.vue'
+import LicensePlate from './LicensePlate.vue'
 import { useVehicles } from '../composables/useVehicles'
 
 const { selected, photo, fullName } = useVehicles()
@@ -10,13 +11,14 @@ const { selected, photo, fullName } = useVehicles()
 
 <template>
   <Card class="relative overflow-hidden">
-    <!-- Foto do veiculo como fundo decorativo, ancorada ao canto inferior
-         direito e a esbater para a cor do card, para nao tapar o texto. -->
+    <!-- Foto do veiculo como fundo decorativo: ocupa sempre a altura toda
+         do card, cortando na largura se for preciso, e esbate para a cor
+         do card para nao tapar o texto. -->
     <img
       v-if="photo"
       :src="photo"
       :alt="fullName(selected)"
-      class="pointer-events-none absolute bottom-0 right-0 max-h-[70%] w-1/2 object-contain object-bottom opacity-40 md:max-h-[85%]"
+      class="pointer-events-none absolute inset-y-0 right-0 w-1/2 object-cover object-right opacity-40"
     />
     <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-card via-card/80 to-transparent"></div>
 
@@ -52,9 +54,7 @@ const { selected, photo, fullName } = useVehicles()
       </div>
 
       <div class="flex items-center gap-4 border-y border-border py-4">
-        <div class="rounded-sm bg-blue-900 px-3 py-2 font-mono text-sm font-semibold text-white">
-          {{ selected?.plate }}
-        </div>
+        <LicensePlate v-if="selected?.plate" :value="selected.plate" />
         <a href="#documentos" class="text-sm font-medium text-primary hover:underline">Documentos</a>
       </div>
     </CardContent>

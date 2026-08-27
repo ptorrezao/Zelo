@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import Button from '@zelo/ui/components/ui/Button.vue'
+import Input from '@zelo/ui/components/ui/Input.vue'
 import { useAuth } from '../composables/useAuth'
 
 definePageMeta({
@@ -17,7 +19,7 @@ const error = ref('')
 
 async function handleLogin() {
   if (!email.value || !password.value) {
-    error.value = 'Please fill in all fields'
+    error.value = 'Preencha todos os campos'
     return
   }
 
@@ -25,262 +27,90 @@ async function handleLogin() {
   error.value = ''
 
   try {
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Perform login
     login(email.value, password.value)
-
-    // Redirect to home
     router.push('/')
-  } catch (err) {
-    error.value = 'Invalid email or password'
+  } catch {
+    error.value = 'Email ou palavra-passe inválidos'
   } finally {
     isLoading.value = false
-  }
-}
-
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter') {
-    handleLogin()
   }
 }
 </script>
 
 <template>
-  <div class="login__container">
-    <!-- Left: Form -->
-    <div class="login__form-side">
-      <div class="login__form-content">
-        <div class="login__header">
-          <h1 class="login__title">Welcome back</h1>
-          <p class="login__subtitle">Sign in to your Zelo account</p>
+  <div class="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+    <!-- Formulário -->
+    <div class="flex items-center justify-center bg-background p-6 sm:p-10">
+      <div class="w-full max-w-sm">
+        <div class="mb-8 flex flex-col items-center gap-4 text-center">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
+            Z
+          </div>
+          <div>
+            <h1 class="text-2xl font-semibold">Bem-vindo de volta</h1>
+            <p class="mt-1 text-sm text-muted-foreground">Inicie sessão na sua conta Zelo</p>
+          </div>
         </div>
 
-        <form @submit.prevent="handleLogin" class="login__form">
-          <div v-if="error" class="login__error">
+        <form class="flex flex-col gap-4" @submit.prevent="handleLogin">
+          <div
+            v-if="error"
+            class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
             {{ error }}
           </div>
 
-          <div class="login__field">
-            <label for="email" class="login__label">Email</label>
-            <ZInput
+          <div class="flex flex-col gap-2">
+            <label for="email" class="text-sm font-medium">Email</label>
+            <Input
               id="email"
               v-model="email"
               type="email"
               placeholder="seu@email.com"
               required
-              @keydown="handleKeydown"
+              autocomplete="email"
             />
           </div>
 
-          <div class="login__field">
-            <div class="login__label-row">
-              <label for="password" class="login__label">Password</label>
-              <a href="/forgot-password" class="login__forgot">Forgot?</a>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <label for="password" class="text-sm font-medium">Palavra-passe</label>
+              <a href="/forgot-password" class="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                Esqueceu-se?
+              </a>
             </div>
-            <ZInput
+            <Input
               id="password"
               v-model="password"
               type="password"
               placeholder="••••••••"
               required
-              @keydown="handleKeydown"
+              autocomplete="current-password"
             />
           </div>
 
-          <ZButton
-            type="submit"
-            variant="primary"
-            :disabled="isLoading"
-            class="login__button"
-          >
-            {{ isLoading ? 'Signing in...' : 'Sign in' }}
-          </ZButton>
+          <Button type="submit" :disabled="isLoading" class="mt-2 w-full">
+            {{ isLoading ? 'A iniciar sessão...' : 'Iniciar sessão' }}
+          </Button>
         </form>
 
-        <p class="login__signup">
-          No account?
-          <a href="#signup" class="login__link">Start free trial</a>
+        <p class="mt-6 text-center text-sm text-muted-foreground">
+          Ainda não tem conta?
+          <a href="#signup" class="font-medium text-foreground hover:underline">Criar conta</a>
         </p>
       </div>
     </div>
 
-    <!-- Right: Branding -->
-    <div class="login__brand-side">
-      <div class="login__brand-content">
-        <div class="login__brand-logo">Zelo</div>
-        <h2 class="login__brand-title">Where teams ship together</h2>
-        <p class="login__brand-description">
-          Join thousands of teams using Zelo to manage their fleet efficiently.
+    <!-- Branding -->
+    <div class="hidden items-center justify-center bg-gradient-to-br from-primary to-blue-900 p-10 text-primary-foreground lg:flex">
+      <div class="max-w-sm text-center">
+        <div class="mb-8 text-lg font-semibold opacity-90">Zelo</div>
+        <h2 class="mb-4 text-2xl font-semibold">Gerencie a sua frota num só lugar</h2>
+        <p class="text-sm leading-relaxed opacity-90">
+          Acompanhe manutenção, quilometragem e custos de todos os seus veículos com o Zelo.
         </p>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.login__container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 100vh;
-  background: var(--z-color-page);
-}
-
-/* Form Side */
-.login__form-side {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--z-space-8);
-}
-
-.login__form-content {
-  width: 100%;
-  max-width: 400px;
-}
-
-.login__header {
-  margin-bottom: var(--z-space-8);
-}
-
-.login__title {
-  margin: 0 0 var(--z-space-2);
-  font-size: var(--z-font-size-xl);
-  font-weight: 600;
-  color: var(--z-color-text);
-}
-
-.login__subtitle {
-  margin: 0;
-  font-size: var(--z-font-size-sm);
-  color: var(--z-color-text-muted);
-}
-
-.login__error {
-  padding: var(--z-space-3);
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: var(--z-radius);
-  font-size: var(--z-font-size-sm);
-  color: #dc2626;
-}
-
-.login__form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--z-space-4);
-  margin-bottom: var(--z-space-6);
-}
-
-.login__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--z-space-2);
-}
-
-.login__label {
-  font-size: var(--z-font-size-sm);
-  font-weight: 500;
-  color: var(--z-color-text);
-}
-
-.login__label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.login__forgot {
-  font-size: var(--z-font-size-sm);
-  color: var(--z-color-text-muted);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.login__forgot:hover {
-  color: var(--z-color-text);
-}
-
-.login__button {
-  width: 100%;
-  margin-top: var(--z-space-2);
-}
-
-.login__signup {
-  text-align: center;
-  margin: 0;
-  font-size: var(--z-font-size-sm);
-  color: var(--z-color-text-muted);
-}
-
-.login__link {
-  color: var(--z-color-text);
-  text-decoration: none;
-  font-weight: 500;
-  transition: opacity 0.2s ease;
-}
-
-.login__link:hover {
-  opacity: 0.7;
-}
-
-/* Brand Side */
-.login__brand-side {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--z-space-8);
-  background: linear-gradient(135deg, var(--z-series-1) 0%, var(--z-series-2) 100%);
-  color: white;
-}
-
-.login__brand-content {
-  max-width: 400px;
-  text-align: center;
-}
-
-.login__brand-logo {
-  font-size: var(--z-font-size-xl);
-  font-weight: 600;
-  margin-bottom: var(--z-space-8);
-  opacity: 0.9;
-}
-
-.login__brand-title {
-  margin: 0 0 var(--z-space-4);
-  font-size: var(--z-font-size-xl);
-  font-weight: 600;
-}
-
-.login__brand-description {
-  margin: 0;
-  font-size: var(--z-font-size-sm);
-  opacity: 0.9;
-  line-height: 1.6;
-}
-
-@media (max-width: 900px) {
-  .login__container {
-    grid-template-columns: 1fr;
-  }
-
-  .login__brand-side {
-    display: none;
-  }
-
-  .login__form-side {
-    padding: var(--z-space-6);
-  }
-}
-
-@media (max-width: 600px) {
-  .login__form-side {
-    padding: var(--z-space-4);
-  }
-
-  .login__form-content {
-    max-width: 100%;
-  }
-}
-</style>

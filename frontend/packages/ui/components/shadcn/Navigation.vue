@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
+import { ref } from 'vue'
 
 const router = useRouter()
 const route = useRoute()
+const expanded = ref(false)
 
 const isActive = (path: string) => {
   return route.path.startsWith(path)
@@ -20,7 +22,7 @@ const navItems = [
 </script>
 
 <template>
-  <nav class="nav-rail">
+  <nav class="nav-rail" @mouseenter="expanded = true" @mouseleave="expanded = false">
     <!-- Logo -->
     <div class="nav-logo">Z</div>
 
@@ -34,6 +36,7 @@ const navItems = [
         @click="router.push(item.path)"
       >
         <span class="nav-icon">{{ item.icon }}</span>
+        <span v-if="expanded" class="nav-label">{{ item.label }}</span>
       </button>
     </div>
 
@@ -41,6 +44,7 @@ const navItems = [
     <div class="nav-footer">
       <button class="nav-user" :title="'Logout'" @click="handleLogout">
         <span class="user-icon">↗</span>
+        <span v-if="expanded" class="user-label">Logout</span>
       </button>
     </div>
   </nav>
@@ -60,6 +64,13 @@ const navItems = [
   align-items: center;
   padding: 1rem 0;
   z-index: 1000;
+  transition: width 0.3s ease;
+}
+
+.nav-rail:hover {
+  width: 240px;
+  align-items: flex-start;
+  padding: 1rem;
 }
 
 .nav-logo {
@@ -79,12 +90,24 @@ const navItems = [
   opacity: 0.8;
 }
 
+.nav-rail:hover .nav-logo {
+  width: 100%;
+  justify-content: flex-start;
+  padding-left: 0.5rem;
+  font-size: 1.25rem;
+}
+
 .nav-items {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   align-items: center;
+  width: 100%;
+}
+
+.nav-rail:hover .nav-items {
+  align-items: flex-start;
 }
 
 .nav-item {
@@ -100,6 +123,23 @@ const navItems = [
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+  gap: 0.75rem;
+}
+
+.nav-rail:hover .nav-item {
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  justify-content: flex-start;
+}
+
+.nav-label {
+  display: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.nav-rail:hover .nav-label {
+  display: block;
 }
 
 .nav-item:hover {
@@ -134,6 +174,11 @@ const navItems = [
   flex-direction: column;
   gap: 1rem;
   align-items: center;
+  width: 100%;
+}
+
+.nav-rail:hover .nav-footer {
+  align-items: flex-start;
 }
 
 .nav-user {
@@ -149,6 +194,23 @@ const navItems = [
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 1.2rem;
+  gap: 0.75rem;
+}
+
+.nav-rail:hover .nav-user {
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  justify-content: flex-start;
+}
+
+.user-label {
+  display: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.nav-rail:hover .user-label {
+  display: block;
 }
 
 .nav-user:hover {

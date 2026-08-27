@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import PageHeader from '@zelo/ui/components/shadcn/PageHeader.vue'
+import DetailGrid from '@zelo/ui/components/shadcn/DetailGrid.vue'
+
 interface Component {
   name: string
   description: string
@@ -13,8 +16,8 @@ const components: Component[] = [
   { name: 'ZPanel', description: 'Painel/card para agrupar conteúdo' },
   { name: 'ZSidePanel', description: 'Painel lateral (sidebar)' },
   { name: 'ZWorkspace', description: 'Container principal do layout' },
-  { name: 'ZPageHeader', description: 'Cabeçalho de página com avatar e título' },
-  { name: 'ZDetailGrid', description: 'Grid responsivo para cards' },
+  { name: 'PageHeader (shadcn)', description: 'Cabeçalho de página com avatar e título' },
+  { name: 'DetailGrid (shadcn)', description: 'Grid responsivo para cards' },
   { name: 'ZNavRail', description: 'Navegação vertical com módulos' },
   { name: 'ZAvatar', description: 'Avatar com iniciais ou imagem' },
   { name: 'ZStat', description: 'Exibição de estatística com label e valor' },
@@ -81,18 +84,18 @@ const components: Component[] = [
       </ZPanel>
     </div>
 
-    <ZPanel title="ZPageHeader">
+    <ZPanel title="PageHeader (shadcn)">
       <p class="component-description">Cabeçalho de página com avatar e título</p>
-      <ZPageHeader
+      <PageHeader
         title="Pedro Torrezão"
         subtitle="ID: 236-542-010"
         avatar-name="PT"
       />
     </ZPanel>
 
-    <ZPanel title="ZDetailGrid">
+    <ZPanel title="DetailGrid (shadcn)">
       <p class="component-description">Grid responsivo para cards</p>
-      <ZDetailGrid>
+      <DetailGrid>
         <ZPanel title="Card 1">
           <p>Conteúdo do primeiro card</p>
         </ZPanel>
@@ -102,7 +105,7 @@ const components: Component[] = [
         <ZPanel title="Card 3">
           <p>Conteúdo do terceiro card</p>
         </ZPanel>
-      </ZDetailGrid>
+      </DetailGrid>
     </ZPanel>
   </ZWorkspace>
 </template>

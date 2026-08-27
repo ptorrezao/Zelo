@@ -1,6 +1,0 @@
-export { default as SButton } from './Button.vue'
-export { default as SCard } from './Card.vue'
-export { default as SCardHeader } from './CardHeader.vue'
-export { default as SCardContent } from './CardContent.vue'
-export { default as SInput } from './Input.vue'
-export { default as SAvatar } from './Avatar.vue'

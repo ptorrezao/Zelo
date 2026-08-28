@@ -12,15 +12,20 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const config = useRuntimeConfig()
   const zelo = config.public.zelo as { shell: string; auto: string; inventory: string }
   const requestUrl = useRequestURL()
-  const isShell = requestUrl.origin === zelo.shell
+  // Por host, nao por origin completo (protocolo+host): atras de um proxy
+  // (Traefik da Dokploy), o SSR pode ver "http" internamente enquanto o
+  // browser ve "https" - comparar o origin inteiro faz o servidor e o
+  // cliente decidirem coisas diferentes (mismatch de hidratacao, e pior,
+  // decisoes de auth diferentes consoante SSR ou client).
+  const isShell = requestUrl.host === new URL(zelo.shell).host
 
   // A app inteira fica desligada quando a flag esta off - nao basta
   // esconder o link na sidebar da shell, quem entrar por URL direta (ou
   // ja tinha a app aberta) tem de ser mandado embora tambem.
   if (!isShell) {
-    const flagKey = requestUrl.origin === zelo.auto
+    const flagKey = requestUrl.host === new URL(zelo.auto).host
       ? 'autoAppEnabled'
-      : requestUrl.origin === zelo.inventory
+      : requestUrl.host === new URL(zelo.inventory).host
         ? 'inventoryAppEnabled'
         : null
 

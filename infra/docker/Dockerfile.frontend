@@ -2,6 +2,11 @@
 #   docker build -f infra/docker/Dockerfile.frontend --target shell     -t zelo-shell .
 #   docker build -f infra/docker/Dockerfile.frontend --target auto      -t zelo-auto .
 #   docker build -f infra/docker/Dockerfile.frontend --target inventory -t zelo-inventory .
+#
+# --build-arg VERSION=<branch@sha curto> - o CI passa isto (ver deploy.yml),
+# fica visivel no rodape de cada app (packages/ui/layouts/default.vue).
+
+ARG VERSION=dev
 
 FROM node:22-slim AS deps
 WORKDIR /src
@@ -17,7 +22,9 @@ COPY frontend/packages/ui/package.json packages/ui/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
+ARG VERSION
 WORKDIR /src
+ENV NUXT_PUBLIC_APP_VERSION=$VERSION
 COPY frontend/ .
 
 FROM build AS build-shell
@@ -30,22 +37,25 @@ FROM build AS build-inventory
 RUN pnpm --filter @zelo/app-inventory build
 
 FROM node:22-slim AS shell
+ARG VERSION
 WORKDIR /app
 COPY --from=build-shell /src/apps/shell/.output .
 EXPOSE 3000
-ENV PORT=3000 HOST=0.0.0.0
+ENV PORT=3000 HOST=0.0.0.0 NUXT_PUBLIC_APP_VERSION=$VERSION
 ENTRYPOINT ["node", "server/index.mjs"]
 
 FROM node:22-slim AS auto
+ARG VERSION
 WORKDIR /app
 COPY --from=build-auto /src/apps/auto/.output .
 EXPOSE 3000
-ENV PORT=3000 HOST=0.0.0.0
+ENV PORT=3000 HOST=0.0.0.0 NUXT_PUBLIC_APP_VERSION=$VERSION
 ENTRYPOINT ["node", "server/index.mjs"]
 
 FROM node:22-slim AS inventory
+ARG VERSION
 WORKDIR /app
 COPY --from=build-inventory /src/apps/inventory/.output .
 EXPOSE 3000
-ENV PORT=3000 HOST=0.0.0.0
+ENV PORT=3000 HOST=0.0.0.0 NUXT_PUBLIC_APP_VERSION=$VERSION
 ENTRYPOINT ["node", "server/index.mjs"]

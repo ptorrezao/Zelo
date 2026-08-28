@@ -2,6 +2,11 @@
 #   docker build -f infra/docker/Dockerfile.backend --target api       -t zelo-api .
 #   docker build -f infra/docker/Dockerfile.backend --target worker    -t zelo-worker .
 #   docker build -f infra/docker/Dockerfile.backend --target migrator  -t zelo-migrator .
+#
+# --build-arg VERSION=<branch@sha curto> - o CI passa isto (ver deploy.yml),
+# a Api expoe-o em GET /version.
+
+ARG VERSION=dev
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -11,21 +16,36 @@ RUN dotnet publish src/Hosts/Zelo.Api             -c Release -o /app/api      --
 RUN dotnet publish src/Hosts/Zelo.Worker          -c Release -o /app/worker   --no-restore
 RUN dotnet publish src/Hosts/Zelo.MigrationRunner -c Release -o /app/migrator --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS api
+# Desde o .NET 8, as imagens oficiais Debian/Alpine deixaram de incluir as
+# bibliotecas Kerberos - o Npgsql tenta sempre negociar GSS encryption ao
+# ligar (GssEncryptionMode.Prefer por omissao), o que falha com
+# "Cannot load library libgssapi_krb5.so.2" sem isto (nao e fatal, o
+# Npgsql cai para ligacao sem GSS, mas gera stderr/ruido nos logs).
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime-base
+RUN apt-get update && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM runtime-base AS api
+ARG VERSION
 WORKDIR /app
 COPY --from=build /app/api .
 EXPOSE 8080
+ENV ZELO_VERSION=$VERSION
 ENTRYPOINT ["dotnet", "Zelo.Api.dll"]
 
 # aspnet em vez de runtime: o modulo Identity usa ASP.NET Core Identity
 # (AddIdentityApiEndpoints), que precisa da shared framework Microsoft.AspNetCore.App
 # mesmo em processos que nao servem HTTP - Worker e MigrationRunner referenciam o modulo.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS worker
+FROM runtime-base AS worker
+ARG VERSION
 WORKDIR /app
 COPY --from=build /app/worker .
+ENV ZELO_VERSION=$VERSION
 ENTRYPOINT ["dotnet", "Zelo.Worker.dll"]
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS migrator
+FROM runtime-base AS migrator
+ARG VERSION
 WORKDIR /app
 COPY --from=build /app/migrator .
+ENV ZELO_VERSION=$VERSION
 ENTRYPOINT ["dotnet", "Zelo.MigrationRunner.dll"]

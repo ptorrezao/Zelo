@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useCookie } from '#app'
-import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, useApiClient } from '@zelo/ui/composables/useApiClient'
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, authCookieOptions, useApiClient } from '@zelo/ui/composables/useApiClient'
 import { describeIdentityError } from '../utils/identityErrors'
 
 const isAuthenticated = ref(false)
@@ -19,8 +19,8 @@ export function useAuth() {
       throw new Error('Email ou palavra-passe inválidos')
     }
 
-    useCookie(ACCESS_TOKEN_COOKIE, { maxAge: Number(data.expiresIn) }).value = data.accessToken
-    useCookie(REFRESH_TOKEN_COOKIE).value = data.refreshToken
+    useCookie(ACCESS_TOKEN_COOKIE, { ...authCookieOptions(), maxAge: Number(data.expiresIn) }).value = data.accessToken
+    useCookie(REFRESH_TOKEN_COOKIE, authCookieOptions()).value = data.refreshToken
 
     isAuthenticated.value = true
     user.value = { email }
@@ -60,8 +60,8 @@ export function useAuth() {
     isAuthenticated.value = false
     user.value = null
 
-    useCookie(ACCESS_TOKEN_COOKIE).value = null
-    useCookie(REFRESH_TOKEN_COOKIE).value = null
+    useCookie(ACCESS_TOKEN_COOKIE, authCookieOptions()).value = null
+    useCookie(REFRESH_TOKEN_COOKIE, authCookieOptions()).value = null
   }
 
   /// Repoe isAuthenticated/user a partir do cookie apos um reload - o

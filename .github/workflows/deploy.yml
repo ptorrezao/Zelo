@@ -1,38 +1,348 @@
 name: deploy
 
-# O compose da Dokploy (infra/compose/docker-compose.dokploy.yml) sobe a
-# stack toda de uma vez - nao ha como fazer deploy so de uma parte, por
-# isso o deploy so corre a partir daqui, depois de TODOS os testes/builds
-# passarem, e nunca a partir dos workflows por-app individuais.
+# Cada app e uma Application propria na Dokploy (nao um compose gigante) -
+# ver infra/compose/README-dokploy.md. As imagens sao compiladas aqui e
+# publicadas no GHCR - a Dokploy so faz pull, nunca builda a partir do
+# codigo (poupa CPU/RAM da VPS).
+#
+# Ordem por servico: Build -> Tests -> Push image -> Deploy. Cada servico
+# so passa por isto se algo no seu caminho mudou (job "changes") - poupa
+# minutos de CI e evita redeploys desnecessarios. api/worker/migrator
+# partilham o mesmo codigo (backend/) por isso andam sempre juntos;
+# shell/auto/inventory sao independentes entre si mas todas dependem de
+# frontend/packages/**.
+#
+# NOTA: cada chamada a API da Dokploy so pede o deploy - nao espera que
+# termine.
 
 on:
   push:
     branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/zelo
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend || 'true' }}
+      shell: ${{ steps.filter.outputs.shell || 'true' }}
+      auto: ${{ steps.filter.outputs.auto || 'true' }}
+      inventory: ${{ steps.filter.outputs.inventory || 'true' }}
+      infra: ${{ steps.filter.outputs.infra || 'true' }}
+      # branch@sha-curto - embutido nas imagens (--build-arg VERSION),
+      # mostrado no rodape do frontend e em GET /version na Api.
+      version: ${{ github.ref_name }}@${{ steps.version.outputs.short_sha }}
+    steps:
+      - name: Compute version
+        id: version
+        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      # fetch-depth: 0 (historico completo) - o paths-filter precisa do
+      # commit anterior presente localmente para calcular o diff; com o
+      # fetch-depth: 1 por omissao ele nao existe e cai no fallback de
+      # "tudo mudou", o que anula toda a deteccao.
+      - name: Checkout (full history)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # So corre para push (tem um "before" para comparar) - workflow_dispatch
+      # nao tem um commit anterior obvio, por isso os outputs acima caem
+      # todos no fallback "true" (deploy manual = deploy tudo, de proposito).
+      - name: Compare against the previous commit
+        uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'push'
+        with:
+          # Sem isto compara contra o branch por omissao do repo (main),
+          # nao contra o commit anterior do push - como o develop esta
+          # sempre a frente do main, isso dava sempre "tudo mudou".
+          base: ${{ github.event.before }}
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'infra/docker/Dockerfile.backend'
+            shell:
+              - 'frontend/apps/shell/**'
+              - 'frontend/packages/**'
+              - 'infra/docker/Dockerfile.frontend'
+            auto:
+              - 'frontend/apps/auto/**'
+              - 'frontend/packages/**'
+              - 'infra/docker/Dockerfile.frontend'
+            inventory:
+              - 'frontend/apps/inventory/**'
+              - 'frontend/packages/**'
+              - 'infra/docker/Dockerfile.frontend'
+            infra:
+              - 'infra/compose/docker-compose.dokploy.yml'
+              - 'infra/docker/garage/**'
+
+  # --- Build + Tests (workflows reutilizados, ja fazem build antes de testar) ---
+
   test-backend:
+    name: "Backend: build & test"
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     uses: ./.github/workflows/backend.yml
 
-  test-frontend:
-    uses: ./.github/workflows/frontend-test.yml
-
   build-shell:
+    name: "Frontend: build shell"
+    needs: changes
+    if: needs.changes.outputs.shell == 'true'
     uses: ./.github/workflows/frontend-shell.yml
 
   build-auto:
+    name: "Frontend: build auto"
+    needs: changes
+    if: needs.changes.outputs.auto == 'true'
     uses: ./.github/workflows/frontend-auto.yml
 
   build-inventory:
+    name: "Frontend: build inventory"
+    needs: changes
+    if: needs.changes.outputs.inventory == 'true'
     uses: ./.github/workflows/frontend-inventory.yml
 
+  # So corre depois das 3 builds (mesmo que alguma tenha sido saltada por
+  # nao ter mudado) - o vitest cobre o workspace inteiro, nao faz sentido
+  # correr antes de saber que pelo menos uma app buildou.
+  test-frontend:
+    name: "Frontend: tests"
+    needs: [changes, build-shell, build-auto, build-inventory]
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      (needs.changes.outputs.shell == 'true' || needs.changes.outputs.auto == 'true' || needs.changes.outputs.inventory == 'true')
+    uses: ./.github/workflows/frontend-test.yml
+
+  # Job sem trabalho real - so para o grafo de dependencias do GitHub
+  # alinhar push-images-backend na mesma coluna dos push-image-* do
+  # frontend (que tem um estagio a mais: build -> test, o backend so tem
+  # test-backend a fazer as duas coisas numa job so).
+  backend-ready:
+    name: "Backend: ready to push"
+    needs: [changes, test-backend]
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "build+test do backend passaram - pronto para publicar as imagens"
+
+  # --- Push images (so depois dos testes do respetivo grupo passarem) ---
+
+  push-images-backend:
+    # Sem referenciar matrix.service aqui de proposito - o GitHub Actions
+    # ja acrescenta o valor da matrix entre parenteses ao nome quando o
+    # job corre (ex: "Push image: backend (api)"); com um template nao
+    # expandido no name:, um job saltado (sem matrix expandida) mostrava
+    # o texto literal "${{ matrix.service }}" em vez de nada.
+    name: "Push image: backend"
+    needs: [changes, backend-ready]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [api, worker, migrator]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.backend
+          target: ${{ matrix.service }}
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
+          build-args: VERSION=${{ needs.changes.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  push-image-shell:
+    name: "Push image: shell"
+    needs: [changes, test-frontend, build-shell]
+    # O "if:" implicito por omissao (correr so se os needs tiverem todos
+    # sucesso) nao propagou bem aqui na pratica - test-frontend usa
+    # always() e isso parece confundir a avaliacao por omissao dos jobs
+    # que dependem dele. Verificar os needs.*.result explicitamente e o
+    # que realmente funciona.
+    if: always() && needs.test-frontend.result == 'success' && needs.build-shell.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.frontend
+          target: shell
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-shell:${{ github.ref_name }}
+          build-args: VERSION=${{ needs.changes.outputs.version }}
+          cache-from: type=gha,scope=shell
+          cache-to: type=gha,mode=max,scope=shell
+
+  push-image-auto:
+    name: "Push image: auto"
+    needs: [changes, test-frontend, build-auto]
+    if: always() && needs.test-frontend.result == 'success' && needs.build-auto.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.frontend
+          target: auto
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-auto:${{ github.ref_name }}
+          build-args: VERSION=${{ needs.changes.outputs.version }}
+          cache-from: type=gha,scope=auto
+          cache-to: type=gha,mode=max,scope=auto
+
+  push-image-inventory:
+    name: "Push image: inventory"
+    needs: [changes, test-frontend, build-inventory]
+    if: always() && needs.test-frontend.result == 'success' && needs.build-inventory.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.frontend
+          target: inventory
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-inventory:${{ github.ref_name }}
+          build-args: VERSION=${{ needs.changes.outputs.version }}
+          cache-from: type=gha,scope=inventory
+          cache-to: type=gha,mode=max,scope=inventory
+
+  # --- Deploy (so os servicos que realmente mudaram) ---
+
   deploy:
-    needs: [test-backend, test-frontend, build-shell, build-auto, build-inventory]
+    name: Deploy to Dokploy
+    needs: [changes, push-images-backend, push-image-shell, push-image-auto, push-image-inventory]
+    # As dependencias acima sao todas condicionais (se("changes" outputs
+    # skip"), ficam "skipped", nao "failure") - "always()" garante que o
+    # deploy continua a correr mesmo quando alguma foi saltada, mas o
+    # "!contains(..., 'failure')" impede-o de correr se alguma delas
+    # (ou um teste) tiver mesmo falhado.
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
     steps:
-      - name: Trigger Dokploy deploy
+      - name: Deploy infra (LavinMQ, Garage, Jaeger, Unleash)
+        if: needs.changes.outputs.infra == 'true'
         run: |
           curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/compose.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"composeId\": \"${{ vars.DOKPLOY_COMPOSE_ID }}\"}"
+            -d "{\"composeId\": \"${{ vars.DOKPLOY_COMPOSE_ID_INFRA }}\"}"
+
+      - name: Deploy migrator
+        if: needs.changes.outputs.backend == 'true' && needs.push-images-backend.result == 'success'
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_MIGRATOR }}\"}"
+
+      - name: Deploy api
+        if: needs.changes.outputs.backend == 'true' && needs.push-images-backend.result == 'success'
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_API }}\"}"
+
+      - name: Deploy worker
+        if: needs.changes.outputs.backend == 'true' && needs.push-images-backend.result == 'success'
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_WORKER }}\"}"
+
+      - name: Deploy shell
+        if: needs.changes.outputs.shell == 'true' && needs.push-image-shell.result == 'success'
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_SHELL }}\"}"
+
+      - name: Deploy auto
+        if: needs.changes.outputs.auto == 'true' && needs.push-image-auto.result == 'success'
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_AUTO }}\"}"
+
+      - name: Deploy inventory
+        if: needs.changes.outputs.inventory == 'true' && needs.push-image-inventory.result == 'success'
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_INVENTORY }}\"}"

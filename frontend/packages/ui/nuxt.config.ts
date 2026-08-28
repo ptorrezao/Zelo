@@ -22,15 +22,26 @@ export default defineNuxtConfig({
     },
     public: {
       // Onde vive cada modulo. Os valores abaixo servem o desenvolvimento,
-      // com cada app na sua porta. Atras do gateway passam a ser os caminhos
-      // do Caddyfile, via NUXT_PUBLIC_ZELO_AUTO=/auto/ e equivalentes.
+      // com cada app na sua porta. Em producao cada app tem o seu proprio
+      // subdominio, via NUXT_PUBLIC_ZELO_AUTO=https://auto.zelo.pt e
+      // equivalentes (ver infra/compose/README-dokploy.md).
       zelo: {
         shell: 'http://localhost:3000',
         auto: 'http://localhost:3001',
         inventory: 'http://localhost:3002',
       },
-      // Base da Zelo.Api. Atras do gateway passa a ser "/api" (ver Caddyfile).
+      // Base da Zelo.Api. Em producao vem de NUXT_PUBLIC_API_BASE.
       apiBase: 'http://localhost:8080',
+      // Vazio em dev (localhost) - cookie de auth fica limitado ao host
+      // atual, correto quando cada app corre numa porta diferente. Em
+      // producao (subdominios) tem de ser o dominio partilhado, ex:
+      // ".hugetower.cloud", via NUXT_PUBLIC_COOKIE_DOMAIN - sem isto, o
+      // login feito na shell fica invisivel para a auto/inventory.
+      cookieDomain: '',
+      // Branch@sha curto, embutido na imagem pelo CI (ver
+      // infra/docker/Dockerfile.frontend) - "dev" fora de um build de CI
+      // (ex: nuxt dev local).
+      appVersion: 'dev',
     },
   },
 })

@@ -1,58 +1,138 @@
-# Deploy via Dokploy (`docker-compose.dokploy.yml`)
+# Deploy via Dokploy
 
-Este compose é o usado pela Dokploy, tanto no environment `development`
-como no `production` do projecto — não é o mesmo do desenvolvimento local
-(`docker-compose.yml`). Cada environment Dokploy corre a *sua própria*
-instância deste stack, com os seus próprios valores para as variáveis
-abaixo.
+Cada environment Dokploy (`development`, `production`, dentro do mesmo
+projecto) tem a mesma estrutura, com valores diferentes:
 
-## Environment Variables a definir na Dokploy (por environment)
+- **2 Databases nativas** (Postgres) — `db` (app principal) e `unleash-db`
+- **1 Compose de infra** (`infra/compose/docker-compose.dokploy.yml`) — LavinMQ, Garage, Jaeger, Unleash
+- **6 Applications**, uma por app — `api`, `worker`, `migrator`, `shell`, `auto`, `inventory`
 
-Painel do environment (dev ou prod) → **Environment Variables**:
+Não há um "compose gigante" com tudo lá dentro — cada app de código é a
+sua própria Application na Dokploy (build, logs, deploy e domínio
+independentes), o que também é o que torna possível o GitHub Actions
+fazer deploy só do que fizer sentido de cada vez.
 
-| Variável | O que é | Nota |
-|---|---|---|
-| `DB_PASSWORD` | password do Postgres principal (`db`) | escolhe uma por ambiente |
-| `UNLEASH_DB_PASSWORD` | password do Postgres do Unleash (`unleash-db`) | |
-| `UNLEASH_API_TOKEN` | token de admin do Unleash | formato `*:*.<segredo>` — ver README local para porquê |
-| `GARAGE_ACCESS_KEY` / `GARAGE_SECRET_KEY` | chave S3 importada no Garage pelo migrator | livremente escolhidas, o migrator regista-as no arranque |
-| `SMTP_HOST` / `SMTP_PORT` | servidor SMTP real para envio de emails | produção precisa de um relay real (não Mailhog) |
-| `PUBLIC_API_URL` | URL pública da Zelo.Api | ex: `https://api.zelo.pt` |
-| `PUBLIC_SHELL_URL` / `PUBLIC_AUTO_URL` / `PUBLIC_INVENTORY_URL` | URLs públicas de cada app Nuxt | ex: `https://app.zelo.pt`, `https://auto.zelo.pt`, `https://inventory.zelo.pt` |
-| `STORAGE_PUBLIC_ENDPOINT` | URL pública do S3 do Garage | ver Domains abaixo — tem de ser um domínio próprio |
+## Rede
 
-`GARAGE_ADMIN_TOKEN` e a password do LavinMQ **não** estão na lista — ficam
-fixos no compose (`a7cd1d89f750c10d8693ef94d6877b2c` e `guest`/`guest`
-respectivamente), porque o Garage exige que bata certo com
-`admin_token` em `infra/docker/garage/garage.toml` (ficheiro estático) e a
-imagem do LavinMQ não aceita mudar a password do `guest` sem um hash
-pré-calculado. Nenhum dos dois fica exposto fora da rede interna do
-compose (sem `ports`, sem Domain), por isso o risco é equivalente ao de
-qualquer outra password interna da stack.
+Um Compose isolado **não entra automaticamente** na rede partilhada onde
+vivem as Databases nativas e as Applications — é preciso juntar-se à
+`dokploy-network` explicitamente. Já está feito no
+`docker-compose.dokploy.yml` (`networks: [dokploy-network]` em cada
+serviço, com `external: true` porque a rede já existe, criada pela
+própria Dokploy). Sem isto, dá exactamente este erro ao arrancar o
+Unleash: `getaddrinfo EAI_AGAIN <host-do-unleash-db>`.
 
-## Domains a configurar na Dokploy (por serviço, por environment)
+Em cada Application (`api`, `worker`, `migrator`), **Advanced → Network**,
+aponta também para **`dokploy-network`** (o mesmo nome fixo) — não é a
+"rede do Compose", é a rede partilhada da própria Dokploy. Se o hostname
+simples (ex. `garage`) não resolver depois de fazeres deploy, tenta o
+prefixo `tasks.` (ex. `tasks.garage`) — workaround documentado da própria
+Dokploy para quando o DNS da mesh do Swarm falha.
 
-Cada app/serviço público precisa de um Domain próprio na UI da Dokploy
-(Project → Environment → serviço → Domains):
+## Databases nativas
+
+Cria em **Project → Environment → Databases → Create Database → Postgres**,
+uma vez por environment:
+
+| Nome sugerido | Usada por |
+|---|---|
+| `db` | `api`, `worker`, `migrator` (`ConnectionStrings__Zelo`) |
+| `unleash-db` | `unleash`, dentro do Compose de infra (`UNLEASH_DATABASE_URL`) |
+
+Depois de criada, a Dokploy mostra o **Internal Host** de cada uma (algo
+tipo `db-xxxx:5432`) — é esse valor que entra nas variáveis abaixo, não
+`db:5432`.
+
+## Compose de infra — Environment Variables
+
+No painel do Compose (`docker-compose.dokploy.yml`), **Environment
+Variables**:
+
+| Variável | Valor |
+|---|---|
+| `UNLEASH_DATABASE_URL` | `postgres://unleash:<password>@<internal host do unleash-db>/unleash` |
+| `UNLEASH_API_TOKEN` | token de admin, formato `*:*.<segredo>` (ver README local) |
+
+`GARAGE_ADMIN_TOKEN` não é variável — está fixo dentro do compose e do
+`garage.toml`, ver comentário no ficheiro.
+
+## As 6 Applications — configuração comum
+
+**Não builda a partir do código** (evita gastar CPU/RAM da VPS) — o
+GitHub Actions compila e publica a imagem no GHCR
+(`ghcr.io/ptorrezao/zelo-<app>:<branch>`), a Dokploy só faz `pull`.
+
+Em cada Application, aba de Source, escolhe **Docker** (não "Github") e
+preenche:
+
+| Campo | Valor |
+|---|---|
+| Docker Image | `ghcr.io/ptorrezao/zelo-<app>:develop` (produção usa `:main`) — a tag é o nome do branch |
+
+Substitui `<app>` por `api`, `worker`, `migrator`, `shell`, `auto` ou
+`inventory`. O repo é público, por isso as imagens no GHCR saem públicas
+por omissão — a Dokploy não precisa de credenciais de registry para o
+`pull`. Não precisas de configurar Build Path, Dockerfile Path, Docker
+Context Path nem Watch Paths — nada disso se aplica ao source "Docker".
+
+`migrator`: **Advanced → Swarm Settings → Mode = Replicated Job** (não
+"Replicated") — corre uma vez, termina, e não entra em crash-loop como
+aconteceria com um serviço normal.
+
+### Environment Variables por Application
+
+**`api` e `worker`** (iguais nas duas):
+
+| Variável | Valor |
+|---|---|
+| `ConnectionStrings__Zelo` | `Host=<internal host do db>;Port=5432;Database=zelo;Username=zelo;Password=<password>` |
+| `Messaging__Host` / `Port` / `Username` / `Password` / `VirtualHost` | `<hostname do lavinmq no compose de infra>` / `5672` / `guest` / `guest` / `/` |
+| `Storage__Endpoint` | URL pública do Garage (ver Domains abaixo) |
+| `Storage__Region` | `garage` |
+| `Storage__Bucket` | `zelo-documents` |
+| `Storage__AccessKey` / `Storage__SecretKey` | livremente escolhidas — o `migrator` regista-as no Garage no arranque |
+| `Otel__Endpoint` | `http://<hostname do jaeger>:4317` |
+| `FeatureFlags__Url` | `http://<hostname do unleash>:4242` |
+| `FeatureFlags__ApiToken` | mesmo valor de `UNLEASH_API_TOKEN` do compose de infra |
+
+`Email__SmtpHost` / `Email__SmtpPort` só vai na **`api`** (só o módulo
+Identity, que corre lá, envia emails) — relay SMTP real em produção.
+
+**`migrator`**: mesmas `ConnectionStrings__Zelo`, `FeatureFlags__*`, mais:
+
+| Variável | Valor |
+|---|---|
+| `Storage__AdminUrl` | `http://<hostname do garage>:3903` |
+| `Storage__AdminToken` | `a7cd1d89f750c10d8693ef94d6877b2c` (fixo, ver compose de infra) |
+| `Storage__Bucket`, `Storage__AccessKey`, `Storage__SecretKey` | iguais às da `api`/`worker` |
+
+**`shell`, `auto`, `inventory`** (iguais nas três):
+
+| Variável | Valor |
+|---|---|
+| `NUXT_PUBLIC_API_BASE` | URL pública da `api` |
+| `NUXT_PUBLIC_ZELO_SHELL` / `_AUTO` / `_INVENTORY` | URLs públicas de cada app |
+
+## Domains a configurar (por Application/serviço)
 
 | Serviço | Porta interna | Domain sugerido |
 |---|---|---|
-| `shell` | 3000 | `app.zelo.pt` (ou `dev.app.zelo.pt`) |
+| `shell` | 3000 | `app.zelo.pt` |
 | `auto` | 3000 | `auto.zelo.pt` |
 | `inventory` | 3000 | `inventory.zelo.pt` |
 | `api` | 8080 | `api.zelo.pt` |
-| `garage` | 3900 | `storage.zelo.pt` — **obrigatório**: os uploads de documentos fazem PUT direto do browser para uma URL pré-assinada gerada pela Api; sem domínio público aqui, os uploads falham |
+| `garage` (no Compose de infra) | 3900 | `storage.zelo.pt` — **obrigatório**: uploads fazem PUT direto do browser para uma URL pré-assinada; sem isto, falham |
 
-Os restantes serviços (`db`, `lavinmq`, `garage` porta 3903/3901, `jaeger`,
-`unleash`, `unleash-db`) ficam só na rede interna — não precisam de Domain.
-Se quiseres a UI do Unleash acessível, dá-lhe também um Domain (porta 4242).
+`worker` e `migrator` não servem HTTP, sem Domain. Do Compose de infra,
+só `garage:3900` precisa de Domain — `lavinmq`, `jaeger` e `unleash`
+ficam internos (dá um Domain ao `unleash` se quiseres a UI acessível).
 
 ## Antes do primeiro deploy
 
-1. Confirma no `Dockerfile.backend`/`Dockerfile.frontend` que o `context`
-   aponta para a raiz do repo (`../..` a partir de `infra/compose/`) — a
-   Dokploy tem de saber isso ao apontar para este ficheiro compose.
-2. Aponta o DNS de cada domínio acima para o IP da VPS antes de configurar
-   os Domains na Dokploy (ela pede o certificado Let's Encrypt na hora).
-3. `SMTP_HOST`/`SMTP_PORT` de produção têm de ser um relay real
-   (Resend, Postmark, SES, etc.) — não há Mailhog neste compose.
+1. Cria as 2 Databases, depois o Compose de infra, depois as 6
+   Applications, nesta ordem — precisas dos Internal Hosts das Databases
+   e dos hostnames do compose de infra para preencher as env vars acima.
+2. Aponta o DNS de cada domínio para o IP da VPS antes de configurar os
+   Domains na Dokploy (pede o certificado Let's Encrypt na hora).
+3. `Email__SmtpHost`/`Port` de produção têm de ser um relay real — não há
+   Mailhog neste setup.

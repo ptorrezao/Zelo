@@ -22,6 +22,7 @@ import SidebarTrigger from '../components/ui/SidebarTrigger.vue'
 const route = useRoute()
 const config = useRuntimeConfig()
 const zelo = config.public.zelo as { shell: string; auto: string; inventory: string }
+const appVersion = config.public.appVersion as string
 const requestUrl = useRequestURL()
 
 const breadcrumbs = computed(() => {
@@ -44,7 +45,10 @@ const navItems = computed(() => [
   ...(featureFlags.value.inventoryAppEnabled ? [{ label: 'Inventário', path: '/', icon: Box, origin: zelo.inventory }] : []),
 ])
 
-const isActive = (origin: string) => requestUrl.origin === origin
+// Por host, nao por origin completo - ver comentario equivalente em
+// middleware/auth.global.ts sobre o SSR ver um protocolo diferente do
+// browser atras do proxy da Dokploy.
+const isActive = (origin: string) => requestUrl.host === new URL(origin).host
 
 const handleLogout = () => {
   // So daqui - nao pela useAuth() da shell, porque este layout tambem
@@ -94,6 +98,9 @@ const handleLogout = () => {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <div class="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+          {{ appVersion }}
+        </div>
       </SidebarFooter>
 
       <SidebarRail />

@@ -69,10 +69,10 @@ internal static class GarageBootstrap
         using var stageContent = new ByteArrayContent(stageBody);
         stageContent.Headers.ContentType = new("application/json");
         var stageResponse = await client.PostAsync("/v1/layout", stageContent, ct);
-        stageResponse.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(stageResponse, ct);
 
         var applyResponse = await client.PostAsJsonAsync("/v1/layout/apply", new { version = layout.Version + 1 }, ct);
-        applyResponse.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(applyResponse, ct);
     }
 
     private static async Task<string> EnsureBucketAsync(HttpClient client, string bucketName, CancellationToken ct)
@@ -85,7 +85,7 @@ internal static class GarageBootstrap
         }
 
         var createResponse = await client.PostAsJsonAsync("/v1/bucket", new { globalAlias = bucketName }, ct);
-        createResponse.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(createResponse, ct);
         var created = await createResponse.Content.ReadFromJsonAsync<BucketResponse>(ct);
         return created!.Id;
     }
@@ -101,7 +101,7 @@ internal static class GarageBootstrap
             "/v1/key/import",
             new { accessKeyId, secretAccessKey, name = keyName },
             ct);
-        importResponse.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(importResponse, ct);
     }
 
     private static async Task EnsureBucketAccessAsync(HttpClient client, string bucketId, string accessKeyId, CancellationToken ct)
@@ -112,7 +112,20 @@ internal static class GarageBootstrap
             "/v1/bucket/allow",
             new { bucketId, accessKeyId, permissions = new { read = true, write = true, owner = false } },
             ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, ct);
+    }
+
+    /// EnsureSuccessStatusCode() por si so nao inclui o corpo da resposta -
+    /// para uma API de admin que devolve o motivo do erro em JSON, perder
+    /// isso torna um 400 impossivel de diagnosticar a partir dos logs.
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        var body = await response.Content.ReadAsStringAsync(ct);
+        throw new InvalidOperationException(
+            $"Garage respondeu {(int)response.StatusCode} {response.StatusCode} em {response.RequestMessage?.RequestUri}: {body}");
     }
 
     private sealed record StatusResponse([property: JsonPropertyName("nodes")] StatusNode[] Nodes);

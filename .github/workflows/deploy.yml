@@ -34,7 +34,13 @@ jobs:
       auto: ${{ steps.filter.outputs.auto || 'true' }}
       inventory: ${{ steps.filter.outputs.inventory || 'true' }}
       infra: ${{ steps.filter.outputs.infra || 'true' }}
+      # branch@sha-curto - embutido nas imagens (--build-arg VERSION),
+      # mostrado no rodape do frontend e em GET /version na Api.
+      version: ${{ github.ref_name }}@${{ steps.version.outputs.short_sha }}
     steps:
+      - name: Compute version
+        id: version
+        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       # fetch-depth: 0 (historico completo) - o paths-filter precisa do
       # commit anterior presente localmente para calcular o diff; com o
       # fetch-depth: 1 por omissao ele nao existe e cai no fallback de
@@ -139,7 +145,7 @@ jobs:
     # expandido no name:, um job saltado (sem matrix expandida) mostrava
     # o texto literal "${{ matrix.service }}" em vez de nada.
     name: "Push image: backend"
-    needs: [backend-ready]
+    needs: [changes, backend-ready]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -166,12 +172,13 @@ jobs:
           target: ${{ matrix.service }}
           push: true
           tags: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
+          build-args: VERSION=${{ needs.changes.outputs.version }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   push-image-shell:
     name: "Push image: shell"
-    needs: [test-frontend, build-shell]
+    needs: [changes, test-frontend, build-shell]
     # O "if:" implicito por omissao (correr so se os needs tiverem todos
     # sucesso) nao propagou bem aqui na pratica - test-frontend usa
     # always() e isso parece confundir a avaliacao por omissao dos jobs
@@ -201,12 +208,13 @@ jobs:
           target: shell
           push: true
           tags: ${{ env.IMAGE_PREFIX }}-shell:${{ github.ref_name }}
+          build-args: VERSION=${{ needs.changes.outputs.version }}
           cache-from: type=gha,scope=shell
           cache-to: type=gha,mode=max,scope=shell
 
   push-image-auto:
     name: "Push image: auto"
-    needs: [test-frontend, build-auto]
+    needs: [changes, test-frontend, build-auto]
     if: always() && needs.test-frontend.result == 'success' && needs.build-auto.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -231,12 +239,13 @@ jobs:
           target: auto
           push: true
           tags: ${{ env.IMAGE_PREFIX }}-auto:${{ github.ref_name }}
+          build-args: VERSION=${{ needs.changes.outputs.version }}
           cache-from: type=gha,scope=auto
           cache-to: type=gha,mode=max,scope=auto
 
   push-image-inventory:
     name: "Push image: inventory"
-    needs: [test-frontend, build-inventory]
+    needs: [changes, test-frontend, build-inventory]
     if: always() && needs.test-frontend.result == 'success' && needs.build-inventory.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -261,6 +270,7 @@ jobs:
           target: inventory
           push: true
           tags: ${{ env.IMAGE_PREFIX }}-inventory:${{ github.ref_name }}
+          build-args: VERSION=${{ needs.changes.outputs.version }}
           cache-from: type=gha,scope=inventory
           cache-to: type=gha,mode=max,scope=inventory
 

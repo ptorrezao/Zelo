@@ -22,6 +22,7 @@ import SidebarTrigger from '../components/ui/SidebarTrigger.vue'
 const route = useRoute()
 const config = useRuntimeConfig()
 const zelo = config.public.zelo as { shell: string; auto: string; inventory: string }
+const appVersion = config.public.appVersion as string
 const requestUrl = useRequestURL()
 
 const breadcrumbs = computed(() => {
@@ -97,6 +98,9 @@ const handleLogout = () => {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <div class="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+          {{ appVersion }}
+        </div>
       </SidebarFooter>
 
       <SidebarRail />

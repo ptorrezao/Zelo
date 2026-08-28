@@ -18,9 +18,9 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 
 builder.Services.AddOpenApi();
 
-// Em dev os 3 frontends vivem em portas diferentes (origens diferentes);
-// atras do gateway (Caddyfile) passam a ser o mesmo dominio e isto deixa
-// de ser preciso, mas fica configuravel para nao partir esse caminho.
+// Em dev os 3 frontends vivem em portas diferentes; em producao, cada um
+// no seu proprio subdominio - origens sempre diferentes da Api, por isso
+// isto e sempre preciso (ver Cors__AllowedOrigins no README-dokploy.md).
 const string FrontendCorsPolicy = "frontend";
 var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"];
@@ -41,6 +41,7 @@ builder.Services.AddInventoryModule(builder.Configuration);
 var app = builder.Build();
 
 app.MapHealthChecks("/health"); // usado pela Dokploy e por este teste de CI
+app.MapGet("/version", () => Results.Ok(new { version = Environment.GetEnvironmentVariable("ZELO_VERSION") ?? "dev" }));
 app.MapOpenApi(); // /openapi/v1.json - e o que frontend/tools/scripts/gen-api-client.sh consome
 app.UseCors(FrontendCorsPolicy);
 app.UseAuthentication();

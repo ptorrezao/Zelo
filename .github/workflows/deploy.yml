@@ -26,6 +26,7 @@ env:
 
 jobs:
   changes:
+    name: Detect changed paths
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.filter.outputs.backend || 'true' }}
@@ -38,16 +39,22 @@ jobs:
       # commit anterior presente localmente para calcular o diff; com o
       # fetch-depth: 1 por omissao ele nao existe e cai no fallback de
       # "tudo mudou", o que anula toda a deteccao.
-      - uses: actions/checkout@v7
+      - name: Checkout (full history)
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       # So corre para push (tem um "before" para comparar) - workflow_dispatch
       # nao tem um commit anterior obvio, por isso os outputs acima caem
       # todos no fallback "true" (deploy manual = deploy tudo, de proposito).
-      - uses: dorny/paths-filter@v3
+      - name: Compare against the previous commit
+        uses: dorny/paths-filter@v3
         id: filter
         if: github.event_name == 'push'
         with:
+          # Sem isto compara contra o branch por omissao do repo (main),
+          # nao contra o commit anterior do push - como o develop esta
+          # sempre a frente do main, isso dava sempre "tudo mudou".
+          base: ${{ github.event.before }}
           filters: |
             backend:
               - 'backend/**'
@@ -71,33 +78,46 @@ jobs:
   # --- Build + Tests (workflows reutilizados, ja fazem build antes de testar) ---
 
   test-backend:
+    name: "Backend: build & test"
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     uses: ./.github/workflows/backend.yml
 
-  test-frontend:
-    needs: changes
-    if: needs.changes.outputs.shell == 'true' || needs.changes.outputs.auto == 'true' || needs.changes.outputs.inventory == 'true'
-    uses: ./.github/workflows/frontend-test.yml
-
   build-shell:
+    name: "Frontend: build shell"
     needs: changes
     if: needs.changes.outputs.shell == 'true'
     uses: ./.github/workflows/frontend-shell.yml
 
   build-auto:
+    name: "Frontend: build auto"
     needs: changes
     if: needs.changes.outputs.auto == 'true'
     uses: ./.github/workflows/frontend-auto.yml
 
   build-inventory:
+    name: "Frontend: build inventory"
     needs: changes
     if: needs.changes.outputs.inventory == 'true'
     uses: ./.github/workflows/frontend-inventory.yml
 
+  # So corre depois das 3 builds (mesmo que alguma tenha sido saltada por
+  # nao ter mudado) - o vitest cobre o workspace inteiro, nao faz sentido
+  # correr antes de saber que pelo menos uma app buildou.
+  test-frontend:
+    name: "Frontend: tests"
+    needs: [changes, build-shell, build-auto, build-inventory]
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      (needs.changes.outputs.shell == 'true' || needs.changes.outputs.auto == 'true' || needs.changes.outputs.inventory == 'true')
+    uses: ./.github/workflows/frontend-test.yml
+
   # --- Push images (so depois dos testes do respetivo grupo passarem) ---
 
   push-images-backend:
+    name: "Push image: ${{ matrix.service }}"
     needs: [changes, test-backend]
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
@@ -108,14 +128,18 @@ jobs:
       matrix:
         service: [api, worker, migrator]
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - name: Build & push image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: infra/docker/Dockerfile.backend
@@ -126,6 +150,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   push-image-shell:
+    name: "Push image: shell"
     needs: [changes, test-frontend, build-shell]
     if: needs.changes.outputs.shell == 'true'
     runs-on: ubuntu-latest
@@ -133,14 +158,18 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - name: Build & push image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: infra/docker/Dockerfile.frontend
@@ -151,6 +180,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=shell
 
   push-image-auto:
+    name: "Push image: auto"
     needs: [changes, test-frontend, build-auto]
     if: needs.changes.outputs.auto == 'true'
     runs-on: ubuntu-latest
@@ -158,14 +188,18 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - name: Build & push image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: infra/docker/Dockerfile.frontend
@@ -176,6 +210,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=auto
 
   push-image-inventory:
+    name: "Push image: inventory"
     needs: [changes, test-frontend, build-inventory]
     if: needs.changes.outputs.inventory == 'true'
     runs-on: ubuntu-latest
@@ -183,14 +218,18 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - name: Build & push image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: infra/docker/Dockerfile.frontend
@@ -203,6 +242,7 @@ jobs:
   # --- Deploy (so os servicos que realmente mudaram) ---
 
   deploy:
+    name: Deploy to Dokploy
     needs: [changes, push-images-backend, push-image-shell, push-image-auto, push-image-inventory]
     # As dependencias acima sao todas condicionais (se("changes" outputs
     # skip"), ficam "skipped", nao "failure") - "always()" garante que o

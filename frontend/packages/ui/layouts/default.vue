@@ -44,7 +44,10 @@ const navItems = computed(() => [
   ...(featureFlags.value.inventoryAppEnabled ? [{ label: 'Inventário', path: '/', icon: Box, origin: zelo.inventory }] : []),
 ])
 
-const isActive = (origin: string) => requestUrl.origin === origin
+// Por host, nao por origin completo - ver comentario equivalente em
+// middleware/auth.global.ts sobre o SSR ver um protocolo diferente do
+// browser atras do proxy da Dokploy.
+const isActive = (origin: string) => requestUrl.host === new URL(origin).host
 
 const handleLogout = () => {
   // So daqui - nao pela useAuth() da shell, porque este layout tambem

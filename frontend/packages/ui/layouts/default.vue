@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useRuntimeConfig, useRequestURL } from '#app'
+import { useRuntimeConfig, useRequestURL, useCookie } from '#app'
 import { Box, Home, LogOut, Truck } from '@lucide/vue'
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../composables/useApiClient'
 import SidebarProvider from '../components/ui/SidebarProvider.vue'
 import Sidebar from '../components/ui/Sidebar.vue'
 import SidebarRail from '../components/ui/SidebarRail.vue'
@@ -43,6 +44,11 @@ const navItems = [
 const isActive = (origin: string) => requestUrl.origin === origin
 
 const handleLogout = () => {
+  // So daqui - nao pela useAuth() da shell, porque este layout tambem
+  // corre nas apps auto/inventario, que nao a tem. O cookie e o unico
+  // estado de sessao que estas apps partilham entre si.
+  useCookie(ACCESS_TOKEN_COOKIE).value = null
+  useCookie(REFRESH_TOKEN_COOKIE).value = null
   window.location.href = zelo.shell + '/login'
 }
 </script>

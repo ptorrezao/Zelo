@@ -22,6 +22,8 @@ export default defineNuxtConfig({
         auto: 'http://localhost:3001',
         inventory: 'http://localhost:3002',
       },
+      // Base da Zelo.Api. Atras do gateway passa a ser "/api" (ver Caddyfile).
+      apiBase: 'http://localhost:8080',
     },
   },
 })

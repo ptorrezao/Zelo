@@ -1,0 +1,10 @@
+root = true
+
+[*.cs]
+
+# Codigo gerado pelo "dotnet ef migrations add" - nao aplicamos as nossas
+# regras de estilo/analise a ficheiros que nao escrevemos a mao.
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.CA1062.severity = none

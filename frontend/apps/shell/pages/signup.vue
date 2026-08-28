@@ -11,7 +11,7 @@ definePageMeta({
 })
 
 const router = useRouter()
-const { login } = useAuth()
+const { register } = useAuth()
 
 const name = ref('')
 const email = ref('')
@@ -19,6 +19,7 @@ const password = ref('')
 const confirmPassword = ref('')
 const isLoading = ref(false)
 const error = ref('')
+const isSubmitted = ref(false)
 
 async function handleSignup() {
   if (!name.value || !email.value || !password.value || !confirmPassword.value) {
@@ -35,12 +36,12 @@ async function handleSignup() {
   error.value = ''
 
   try {
-    // TODO: Implementar chamada real à API de registo
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    login(email.value, password.value)
-    router.push('/')
-  } catch {
-    error.value = 'Não foi possível criar a conta'
+    await register(email.value, password.value)
+    // A conta fica por confirmar (RequireConfirmedEmail no backend) - so
+    // depois de clicar no link enviado por email e que o login funciona.
+    isSubmitted.value = true
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Não foi possível criar a conta'
   } finally {
     isLoading.value = false
   }
@@ -57,11 +58,13 @@ async function handleSignup() {
           </div>
           <div>
             <h1 class="text-2xl font-semibold">Criar conta</h1>
-            <p class="mt-1 text-sm text-muted-foreground">Comece a usar o Zelo gratuitamente</p>
+            <p class="mt-1 text-sm text-muted-foreground">
+              {{ isSubmitted ? 'Verifique o seu email' : 'Comece a usar o Zelo gratuitamente' }}
+            </p>
           </div>
         </div>
 
-        <form class="flex flex-col gap-4" @submit.prevent="handleSignup">
+        <form v-if="!isSubmitted" class="flex flex-col gap-4" @submit.prevent="handleSignup">
           <div
             v-if="error"
             class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -115,7 +118,16 @@ async function handleSignup() {
           </Button>
         </form>
 
-        <p class="mt-6 text-center text-sm text-muted-foreground">
+        <div v-else class="flex flex-col gap-4">
+          <p class="text-sm leading-relaxed">
+            Enviámos um link de confirmação para <strong>{{ email }}</strong>
+          </p>
+          <Button class="mt-2 w-full" @click="router.push('/login')">
+            Voltar a iniciar sessão
+          </Button>
+        </div>
+
+        <p v-if="!isSubmitted" class="mt-6 text-center text-sm text-muted-foreground">
           Já tem conta?
           <a href="/login" class="font-medium text-foreground hover:underline">Iniciar sessão</a>
         </p>

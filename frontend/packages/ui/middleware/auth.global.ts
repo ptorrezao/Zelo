@@ -3,6 +3,7 @@
 // proprias paginas. So a shell tem paginas publicas de autenticacao; as
 // restantes apps reenviam sempre para lá quando falta a sessao.
 import { useRuntimeConfig, useRequestURL, useCookie, navigateTo, defineNuxtRouteMiddleware } from '#app'
+import { ACCESS_TOKEN_COOKIE } from '../composables/useApiClient'
 
 const PUBLIC_SHELL_PATHS = ['/login', '/forgot-password', '/signup']
 
@@ -16,7 +17,7 @@ export default defineNuxtRouteMiddleware((to) => {
     return
   }
 
-  const token = useCookie('auth_token')
+  const token = useCookie(ACCESS_TOKEN_COOKIE)
   if (token.value) {
     return
   }

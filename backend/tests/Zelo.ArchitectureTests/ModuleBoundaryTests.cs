@@ -39,8 +39,9 @@ public class ModuleBoundaryTests
     [Fact]
     public void Biblioteca_de_mensageria_so_e_visivel_em_Zelo_Messaging()
     {
-        // Substituir pelo namespace da biblioteca escolhida (ver ADR-002).
-        const string vendorNamespace = "Wolverine";
+        // Ver ADR-002: LavinMQ via AMQP (RabbitMQ.Client), atras de
+        // IEventPublisher / IEventHandler em Zelo.Messaging.
+        const string vendorNamespace = "RabbitMQ";
 
         foreach (var module in ModuleNames)
         {

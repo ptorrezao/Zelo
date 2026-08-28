@@ -7,4 +7,7 @@
     <ProjectReference Include="..\..\Modules\Zelo.Modules.Auto\Zelo.Modules.Auto.csproj" />
     <ProjectReference Include="..\..\Modules\Zelo.Modules.Inventory\Zelo.Modules.Inventory.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
 </Project>

@@ -1,3 +1,5 @@
+name: zelo
+
 services:
   db:
     image: postgres:17-alpine
@@ -29,9 +31,26 @@ services:
       target: api
     environment:
       ConnectionStrings__Zelo: "Host=db;Port=5432;Database=zelo;Username=zelo;Password=zelo"
+      Messaging__Host: lavinmq
+      Messaging__Port: "5672"
+      Messaging__Username: guest
+      Messaging__Password: guest
+      Messaging__VirtualHost: "/"
+      Storage__Endpoint: "http://garage:3900"
+      Storage__Region: "garage"
+      Storage__Bucket: "zelo-documents"
+      Storage__AccessKey: "GKzeloaccesskey"
+      Storage__SecretKey: "zelosecretkeyzelosecretkeyzelosecretkey"
+      Otel__Endpoint: "http://jaeger:4317"
+      FeatureFlags__Url: "http://unleash:4242/api"
+      FeatureFlags__ApiToken: "*:*.unleash-insecure-api-token"
+      Email__SmtpHost: mailhog
+      Email__SmtpPort: "1025"
     ports: ["8080:8080"]
     depends_on:
       migrator: { condition: service_completed_successfully }
+      lavinmq: { condition: service_healthy }
+      garage: { condition: service_started }
 
   worker:
     build:
@@ -40,8 +59,101 @@ services:
       target: worker
     environment:
       ConnectionStrings__Zelo: "Host=db;Port=5432;Database=zelo;Username=zelo;Password=zelo"
+      Messaging__Host: lavinmq
+      Messaging__Port: "5672"
+      Messaging__Username: guest
+      Messaging__Password: guest
+      Messaging__VirtualHost: "/"
+      Storage__Endpoint: "http://garage:3900"
+      Storage__Region: "garage"
+      Storage__Bucket: "zelo-documents"
+      Storage__AccessKey: "GKzeloaccesskey"
+      Storage__SecretKey: "zelosecretkeyzelosecretkeyzelosecretkey"
+      Otel__Endpoint: "http://jaeger:4317"
+      Email__SmtpHost: mailhog
+      Email__SmtpPort: "1025"
     depends_on:
       migrator: { condition: service_completed_successfully }
+      lavinmq: { condition: service_healthy }
+
+  # Broker de mensagens: substitui o bus em processo (ADR-0002). Wire-compatible
+  # com AMQP 0-9-1 / RabbitMQ.Client. UI de management em :15672 (guest/guest).
+  # NOTA: a imagem nao suporta definir a password do utilizador por defeito
+  # via env var (so teria efeito com um hash pre-calculado) - fica-se com
+  # guest/guest, que ja e acessivel fora de loopback por defeito na imagem.
+  lavinmq:
+    image: cloudamqp/lavinmq:latest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes: ["lavinmqdata:/var/lib/lavinmq"]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5672"]
+      interval: 5s
+      retries: 10
+
+  # Armazenamento de documentos (S3-compatible, self-hosted). PRECISA de
+  # bootstrap manual na primeira vez (cluster de 1 nó):
+  #   docker compose exec garage /garage layout assign -z dc1 -c 1G <node-id>
+  #   docker compose exec garage /garage layout apply --version 1
+  #   docker compose exec garage /garage bucket create zelo-documents
+  #   docker compose exec garage /garage key create zelo-api-key
+  #   docker compose exec garage /garage bucket allow --read --write zelo-documents --key zelo-api-key
+  # (node-id obtém-se de `docker compose exec garage /garage status`)
+  garage:
+    image: dxflrs/garage:v1.0.1
+    volumes:
+      - ../docker/garage/garage.toml:/etc/garage.toml:ro
+      - garagemeta:/var/lib/garage/meta
+      - garagedata:/var/lib/garage/data
+    ports:
+      - "3900:3900" # S3 API
+      - "3901:3901" # RPC (cluster, sem uso num nó unico)
+      - "3903:3903" # admin API
+
+  # Captura emails localmente (confirmacao de conta, reset de password).
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # UI web
+
+  # Tracing distribuido. Recebe OTLP do Zelo.ServiceDefaults.
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+  # Feature flags self-hosted (Apache-2.0, sem edicao paga escondida).
+  unleash-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: unleash
+      POSTGRES_PASSWORD: unleash
+      POSTGRES_DB: unleash
+    volumes: ["unleashdbdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unleash"]
+      interval: 5s
+      retries: 10
+
+  unleash:
+    image: unleashorg/unleash-server:latest
+    environment:
+      DATABASE_URL: "postgres://unleash:unleash@unleash-db:5432/unleash"
+      DATABASE_SSL: "false"
+      INIT_ADMIN_API_TOKENS: "*:*.unleash-insecure-api-token"
+    ports: ["4242:4242"]
+    depends_on:
+      unleash-db: { condition: service_healthy }
 
 volumes:
   pgdata:
+  lavinmqdata:
+  garagemeta:
+  garagedata:
+  unleashdbdata:

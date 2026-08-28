@@ -28,8 +28,7 @@ async function handleLogin() {
   error.value = ''
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    login(email.value, password.value)
+    await login(email.value, password.value)
     router.push('/')
   } catch {
     error.value = 'Email ou palavra-passe inválidos'

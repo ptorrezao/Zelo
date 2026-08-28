@@ -4,6 +4,7 @@
   "private": true,
   "main": "./nuxt.config.ts",
   "dependencies": {
+    "@zelo/api-client": "workspace:*",
     "@zelo/config": "workspace:*"
   }
 }

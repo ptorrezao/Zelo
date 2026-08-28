@@ -1,0 +1,23 @@
+# Config de desenvolvimento: cluster de 1 no, sem replicacao.
+# Segredos aqui sao so para dev local (o compose nao expoe isto fora da rede
+# docker) - em producao isto vem de variavel de ambiente / secret store.
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "garage:3901"
+rpc_secret = "134c8e7ffd056d6cd9ec80ad0b3bd56aa1e8513bea222f1cf3264b530d5c45a7"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "[::]:3903"
+admin_token = "a7cd1d89f750c10d8693ef94d6877b2c"
+metrics_token = "a7cd1d89f750c10d8693ef94d6877b2c"

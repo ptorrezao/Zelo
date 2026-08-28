@@ -139,8 +139,7 @@ jobs:
     # expandido no name:, um job saltado (sem matrix expandida) mostrava
     # o texto literal "${{ matrix.service }}" em vez de nada.
     name: "Push image: backend"
-    needs: [changes, backend-ready]
-    if: needs.changes.outputs.backend == 'true'
+    needs: [backend-ready]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -172,8 +171,7 @@ jobs:
 
   push-image-shell:
     name: "Push image: shell"
-    needs: [changes, test-frontend, build-shell]
-    if: needs.changes.outputs.shell == 'true'
+    needs: [test-frontend, build-shell]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -202,8 +200,7 @@ jobs:
 
   push-image-auto:
     name: "Push image: auto"
-    needs: [changes, test-frontend, build-auto]
-    if: needs.changes.outputs.auto == 'true'
+    needs: [test-frontend, build-auto]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -232,8 +229,7 @@ jobs:
 
   push-image-inventory:
     name: "Push image: inventory"
-    needs: [changes, test-frontend, build-inventory]
-    if: needs.changes.outputs.inventory == 'true'
+    needs: [test-frontend, build-inventory]
     runs-on: ubuntu-latest
     permissions:
       contents: read

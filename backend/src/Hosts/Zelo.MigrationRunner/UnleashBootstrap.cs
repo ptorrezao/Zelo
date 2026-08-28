@@ -18,9 +18,11 @@ internal static class UnleashBootstrap
         ("inventory-app-enabled", "Mostra a app Inventario na navegacao"),
     ];
 
-    public static async Task RunAsync(string baseUrl, string apiToken, CancellationToken ct = default)
+    public static async Task RunAsync(
+        string baseUrl, string apiToken, HttpMessageHandler? handler = null, CancellationToken ct = default)
     {
-        using var client = new HttpClient { BaseAddress = new Uri(baseUrl) };
+        using var client = handler is null ? new HttpClient() : new HttpClient(handler);
+        client.BaseAddress = new Uri(baseUrl);
         // TryAddWithoutValidation: o token do Unleash ("*:*.segredo") nao e
         // um valor valido de Authorization RFC 7230 (nao tem esquema), o
         // .Add() normal rejeita-o.

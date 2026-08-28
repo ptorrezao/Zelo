@@ -19,5 +19,8 @@
     <Project Path="tests/Zelo.Modules.Core.Tests/Zelo.Modules.Core.Tests.csproj" />
     <Project Path="tests/Zelo.Messaging.Tests/Zelo.Messaging.Tests.csproj" />
     <Project Path="tests/Zelo.Modules.Inventory.Tests/Zelo.Modules.Inventory.Tests.csproj" />
+    <Project Path="tests/Zelo.ServiceDefaults.Tests/Zelo.ServiceDefaults.Tests.csproj" />
+    <Project Path="tests/Zelo.MigrationRunner.Tests/Zelo.MigrationRunner.Tests.csproj" />
+    <Project Path="tests/Zelo.Modules.Identity.Tests/Zelo.Modules.Identity.Tests.csproj" />
   </Folder>
 </Solution>

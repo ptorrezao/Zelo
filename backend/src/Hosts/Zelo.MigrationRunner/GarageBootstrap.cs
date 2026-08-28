@@ -18,9 +18,11 @@ internal static class GarageBootstrap
         string accessKeyId,
         string secretAccessKey,
         string keyName,
+        HttpMessageHandler? handler = null,
         CancellationToken ct = default)
     {
-        using var client = new HttpClient { BaseAddress = new Uri(adminUrl) };
+        using var client = handler is null ? new HttpClient() : new HttpClient(handler);
+        client.BaseAddress = new Uri(adminUrl);
         client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {adminToken}");
 
         var nodeId = await WaitForNodeIdAsync(client, ct);

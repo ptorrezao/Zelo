@@ -4,9 +4,10 @@ export default defineNuxtConfig({
   devServer: { port: 3001 },
 
   app: {
-    // O Caddyfile encaminha /auto/* sem remover o prefixo, portanto em
-    // producao esta app corre com NUXT_APP_BASE_URL=/auto/ — sem isso os
-    // assets sao pedidos na raiz e o gateway entrega-os ao shell.
+    // Cada app fica no seu proprio subdominio (sem gateway/path-rewrite
+    // à frente) - fica '/' em todos os ambientes. NUXT_APP_BASE_URL so
+    // continua configuravel para nao partir este caminho se um dia
+    // voltarmos a um gateway com caminhos partilhados.
     baseURL: process.env.NUXT_APP_BASE_URL ?? '/',
   },
 })

@@ -1,6 +1,6 @@
 export default defineNuxtConfig({
   extends: ['@zelo/ui'],
-  devtools: { enabled: false }, // teste de CI: confirmar push-image-auto
+  devtools: { enabled: false },
   devServer: { port: 3001 },
 
   app: {

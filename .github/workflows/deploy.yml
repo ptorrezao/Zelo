@@ -117,7 +117,12 @@ jobs:
   # --- Push images (so depois dos testes do respetivo grupo passarem) ---
 
   push-images-backend:
-    name: "Push image: ${{ matrix.service }}"
+    # Sem referenciar matrix.service aqui de proposito - o GitHub Actions
+    # ja acrescenta o valor da matrix entre parenteses ao nome quando o
+    # job corre (ex: "Push image: backend (api)"); com um template nao
+    # expandido no name:, um job saltado (sem matrix expandida) mostrava
+    # o texto literal "${{ matrix.service }}" em vez de nada.
+    name: "Push image: backend"
     needs: [changes, test-backend]
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest

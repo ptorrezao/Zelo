@@ -172,6 +172,12 @@ jobs:
   push-image-shell:
     name: "Push image: shell"
     needs: [test-frontend, build-shell]
+    # O "if:" implicito por omissao (correr so se os needs tiverem todos
+    # sucesso) nao propagou bem aqui na pratica - test-frontend usa
+    # always() e isso parece confundir a avaliacao por omissao dos jobs
+    # que dependem dele. Verificar os needs.*.result explicitamente e o
+    # que realmente funciona.
+    if: always() && needs.test-frontend.result == 'success' && needs.build-shell.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -201,6 +207,7 @@ jobs:
   push-image-auto:
     name: "Push image: auto"
     needs: [test-frontend, build-auto]
+    if: always() && needs.test-frontend.result == 'success' && needs.build-auto.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -230,6 +237,7 @@ jobs:
   push-image-inventory:
     name: "Push image: inventory"
     needs: [test-frontend, build-inventory]
+    if: always() && needs.test-frontend.result == 'success' && needs.build-inventory.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -282,7 +290,7 @@ jobs:
             -d "{\"composeId\": \"${{ vars.DOKPLOY_COMPOSE_ID_INFRA }}\"}"
 
       - name: Deploy migrator
-        if: needs.changes.outputs.backend == 'true'
+        if: needs.changes.outputs.backend == 'true' && needs.push-images-backend.result == 'success'
         run: |
           curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
@@ -290,7 +298,7 @@ jobs:
             -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_MIGRATOR }}\"}"
 
       - name: Deploy api
-        if: needs.changes.outputs.backend == 'true'
+        if: needs.changes.outputs.backend == 'true' && needs.push-images-backend.result == 'success'
         run: |
           curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
@@ -298,7 +306,7 @@ jobs:
             -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_API }}\"}"
 
       - name: Deploy worker
-        if: needs.changes.outputs.backend == 'true'
+        if: needs.changes.outputs.backend == 'true' && needs.push-images-backend.result == 'success'
         run: |
           curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
@@ -306,7 +314,7 @@ jobs:
             -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_WORKER }}\"}"
 
       - name: Deploy shell
-        if: needs.changes.outputs.shell == 'true'
+        if: needs.changes.outputs.shell == 'true' && needs.push-image-shell.result == 'success'
         run: |
           curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
@@ -314,7 +322,7 @@ jobs:
             -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_SHELL }}\"}"
 
       - name: Deploy auto
-        if: needs.changes.outputs.auto == 'true'
+        if: needs.changes.outputs.auto == 'true' && needs.push-image-auto.result == 'success'
         run: |
           curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
@@ -322,7 +330,7 @@ jobs:
             -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_AUTO }}\"}"
 
       - name: Deploy inventory
-        if: needs.changes.outputs.inventory == 'true'
+        if: needs.changes.outputs.inventory == 'true' && needs.push-image-inventory.result == 'success'
         run: |
           curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \

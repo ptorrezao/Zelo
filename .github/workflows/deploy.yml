@@ -34,7 +34,13 @@ jobs:
       inventory: ${{ steps.filter.outputs.inventory || 'true' }}
       infra: ${{ steps.filter.outputs.infra || 'true' }}
     steps:
+      # fetch-depth: 0 (historico completo) - o paths-filter precisa do
+      # commit anterior presente localmente para calcular o diff; com o
+      # fetch-depth: 1 por omissao ele nao existe e cai no fallback de
+      # "tudo mudou", o que anula toda a deteccao.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       # So corre para push (tem um "before" para comparar) - workflow_dispatch
       # nao tem um commit anterior obvio, por isso os outputs acima caem
       # todos no fallback "true" (deploy manual = deploy tudo, de proposito).

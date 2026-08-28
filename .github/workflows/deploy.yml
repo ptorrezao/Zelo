@@ -3,8 +3,11 @@ name: deploy
 # Cada app e uma Application propria na Dokploy (nao um compose gigante) -
 # ver infra/compose/README-dokploy.md. As imagens sao compiladas aqui e
 # publicadas no GHCR - a Dokploy so faz pull, nunca builda a partir do
-# codigo (poupa CPU/RAM da VPS). O deploy so corre depois de TODOS os
-# testes passarem, nunca a partir dos workflows por-app individuais.
+# codigo (poupa CPU/RAM da VPS).
+#
+# Ordem: build das imagens primeiro, testes depois (gated por push-images),
+# deploy so no fim, depois de tudo passar. Nunca a partir dos workflows
+# por-app individuais.
 #
 # NOTA: cada chamada a API da Dokploy so pede o deploy - nao espera que
 # termine. A ordem abaixo (infra, migrator, api/worker, frontends) e a
@@ -21,23 +24,7 @@ env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/zelo
 
 jobs:
-  test-backend:
-    uses: ./.github/workflows/backend.yml
-
-  test-frontend:
-    uses: ./.github/workflows/frontend-test.yml
-
-  build-shell:
-    uses: ./.github/workflows/frontend-shell.yml
-
-  build-auto:
-    uses: ./.github/workflows/frontend-auto.yml
-
-  build-inventory:
-    uses: ./.github/workflows/frontend-inventory.yml
-
   push-images:
-    needs: [test-backend, test-frontend, build-shell, build-auto, build-inventory]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -75,8 +62,28 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-  deploy:
+  test-backend:
     needs: push-images
+    uses: ./.github/workflows/backend.yml
+
+  test-frontend:
+    needs: push-images
+    uses: ./.github/workflows/frontend-test.yml
+
+  build-shell:
+    needs: push-images
+    uses: ./.github/workflows/frontend-shell.yml
+
+  build-auto:
+    needs: push-images
+    uses: ./.github/workflows/frontend-auto.yml
+
+  build-inventory:
+    needs: push-images
+    uses: ./.github/workflows/frontend-inventory.yml
+
+  deploy:
+    needs: [test-backend, test-frontend, build-shell, build-auto, build-inventory]
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
     steps:

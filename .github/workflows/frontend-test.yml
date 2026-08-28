@@ -1,15 +1,16 @@
-name: frontend-inventory
+name: frontend-test
 
 on:
   push:
     paths:
-      - "frontend/apps/inventory/**"
-      - "frontend/packages/**"
-      - ".github/workflows/frontend-inventory.yml"
+      - "frontend/**"
+      - ".github/workflows/frontend-test.yml"
+  pull_request:
+    paths: ["frontend/**"]
   workflow_call:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -23,5 +24,5 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: frontend
-      - run: pnpm --filter @zelo/app-inventory build
+      - run: pnpm test
         working-directory: frontend

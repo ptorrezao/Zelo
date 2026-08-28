@@ -6,6 +6,7 @@ on:
       - "frontend/apps/auto/**"
       - "frontend/packages/**"
       - ".github/workflows/frontend-auto.yml"
+  workflow_call:
 
 jobs:
   build:

@@ -1,8 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <!-- Para IEndpointFilter/RouteGroupBuilder (RequireFeatureFlag), sem
+         ser um projeto Sdk.Web inteiro. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Microsoft.Extensions.Configuration.Abstractions / .Diagnostics.HealthChecks
+         / .Options.ConfigurationExtensions / .Http ja vem com o FrameworkReference
+         acima - referencia-los outra vez da erro de "package pruning". -->
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />

@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -16,6 +17,14 @@ public static class ServiceDefaults
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddHealthChecks();
+
+        services.Configure<FeatureFlagsOptions>(configuration.GetSection(FeatureFlagsOptions.SectionName));
+        services.AddHttpClient<IFeatureFlagGate, UnleashFeatureFlagGate>((provider, client) =>
+        {
+            var url = provider.GetRequiredService<IOptions<FeatureFlagsOptions>>().Value.Url;
+            if (!string.IsNullOrWhiteSpace(url))
+                client.BaseAddress = new Uri(url);
+        });
 
         var otlpEndpoint = configuration["Otel:Endpoint"];
         // Sem isto a Api e o Worker caiam ambos no nome generico "zelo" e

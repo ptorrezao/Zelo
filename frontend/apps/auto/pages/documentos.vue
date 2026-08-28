@@ -25,7 +25,7 @@ const typeIcon: Record<string, string> = {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-3xl flex-col gap-6">
+  <div v-if="selected" class="mx-auto flex max-w-3xl flex-col gap-6">
     <div>
       <NuxtLink to="/" class="text-sm text-muted-foreground transition-colors hover:text-foreground">
         ← {{ fullName(selected) }}

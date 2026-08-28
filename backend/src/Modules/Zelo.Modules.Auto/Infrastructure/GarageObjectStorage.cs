@@ -23,6 +23,9 @@ internal sealed class GarageObjectStorage : IObjectStorage
                 ServiceURL = _options.Endpoint,
                 ForcePathStyle = true,
                 AuthenticationRegion = _options.Region,
+                // O SDK assume https por omissao independentemente do
+                // esquema em ServiceURL - o Garage aqui nao tem TLS.
+                UseHttp = _options.Endpoint.StartsWith("http://", StringComparison.Ordinal),
             });
     }
 
@@ -38,6 +41,15 @@ internal sealed class GarageObjectStorage : IObjectStorage
             Expires = expiresAt.UtcDateTime,
             ContentType = contentType,
         });
+
+        // O SDK gera sempre "https://" aqui, mesmo com UseHttp=true e um
+        // ServiceURL "http://" - nao ha TLS no Garage local. O esquema
+        // nao entra na assinatura SigV4 (so host+path+query), por isso
+        // trocar depois e seguro e nao invalida a URL.
+        if (_options.Endpoint.StartsWith("http://", StringComparison.Ordinal) && url.StartsWith("https://", StringComparison.Ordinal))
+        {
+            url = "http://" + url["https://".Length..];
+        }
 
         return (new Uri(url), expiresAt);
     }

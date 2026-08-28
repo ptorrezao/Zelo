@@ -38,25 +38,14 @@ acessível fora de loopback nesta imagem (ver comentário no compose file).
 | API S3 | http://localhost:3900 |
 | Admin API | http://localhost:3903 |
 | Bucket | `zelo-documents` |
-| Access Key / Secret Key (usados pela Api/Worker) | `GKzeloaccesskey` / `zelosecretkeyzelosecretkeyzelosecretkey` |
-| Admin token (`/etc/garage.toml`) | `a7cd1d89f750c10d8693ef94d6877b2c` |
+| Access Key / Secret Key (usados pela Api/Worker) | `GK150252b5f2fe57b6e3250b27` / `bd257b59116ab67336fbe92145ffc0f7e4149d599f82070281dedd036af4579c` |
+| Admin token (`/etc/garage.toml`, usado só pelo migrator) | `a7cd1d89f750c10d8693ef94d6877b2c` |
 
-⚠️ **Precisa de bootstrap manual na primeira vez** (cluster de 1 nó) — sem
-isto o bucket/key acima não existem de facto e os uploads falham:
-
-```bash
-docker compose -f infra/compose/docker-compose.yml exec garage /garage status
-# copiar o node-id da saída, depois:
-docker compose -f infra/compose/docker-compose.yml exec garage /garage layout assign -z dc1 -c 1G <node-id>
-docker compose -f infra/compose/docker-compose.yml exec garage /garage layout apply --version 1
-docker compose -f infra/compose/docker-compose.yml exec garage /garage bucket create zelo-documents
-docker compose -f infra/compose/docker-compose.yml exec garage /garage key create zelo-api-key
-docker compose -f infra/compose/docker-compose.yml exec garage /garage bucket allow --read --write zelo-documents --key zelo-api-key
-```
-
-O access/secret key reais gerados pelo `key create` têm de substituir os
-valores em `Storage__AccessKey`/`Storage__SecretKey` no compose file (os
-que lá estão agora são placeholders, não foram gerados ainda).
+Layout do cluster (1 nó), bucket e chave são criados automaticamente pelo
+`migrator` no arranque (`GarageBootstrap.cs`, via `Storage__Admin*` no
+compose) — nada manual a fazer. A chave é importada com um valor fixo
+(`/v1/key/import`) em vez de gerada, precisamente para poder ficar
+hardcoded no compose como as outras credenciais de dev.
 
 ## Mailhog (`mailhog`) — captura de emails
 

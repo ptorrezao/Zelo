@@ -90,7 +90,9 @@ watch(open, (isOpen) => {
   }
 })
 
-function handleSubmit() {
+const isSubmitting = ref(false)
+
+async function handleSubmit() {
   if (!brand.value || !model.value || !plate.value) return
 
   const input = {
@@ -107,14 +109,18 @@ function handleSubmit() {
     iucDueDate: iucDueDate.value,
   }
 
-  if (isEditMode.value && props.vehicleId) {
-    updateVehicle(props.vehicleId, input)
-  } else {
-    const vehicle = addVehicle(input)
-    selectedId.value = vehicle.id
+  isSubmitting.value = true
+  try {
+    if (isEditMode.value && props.vehicleId) {
+      await updateVehicle(props.vehicleId, input)
+    } else {
+      const vehicle = await addVehicle(input)
+      selectedId.value = vehicle.id
+    }
+    open.value = false
+  } finally {
+    isSubmitting.value = false
   }
-
-  open.value = false
 }
 </script>
 
@@ -190,7 +196,7 @@ function handleSubmit() {
 
       <SheetFooter>
         <Button variant="outline" @click="close">Cancelar</Button>
-        <Button @click="handleSubmit">{{ isEditMode ? 'Guardar' : 'Adicionar' }}</Button>
+        <Button :disabled="isSubmitting" @click="handleSubmit">{{ isEditMode ? 'Guardar' : 'Adicionar' }}</Button>
       </SheetFooter>
     </template>
   </Sheet>

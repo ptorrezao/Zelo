@@ -31,24 +31,31 @@ function reset() {
   odometer.value = ''
 }
 
-function handleSubmit() {
+const isSubmitting = ref(false)
+
+async function handleSubmit() {
   if (!selected.value) return
   if (!date.value || !workshop.value || !description.value || !cost.value || !odometer.value) return
 
-  const maintenance = addMaintenance(selected.value.id, {
-    date: date.value,
-    type: type.value,
-    workshop: workshop.value,
-    description: description.value,
-    cost: cost.value,
-    odometer: odometer.value,
-  })
+  isSubmitting.value = true
+  try {
+    const maintenance = await addMaintenance(selected.value.id, {
+      date: date.value,
+      type: type.value,
+      workshop: workshop.value,
+      description: description.value,
+      cost: cost.value,
+      odometer: odometer.value,
+    })
 
-  reset()
-  open.value = false
+    reset()
+    open.value = false
 
-  if (maintenance) {
-    router.push(`/manutencao/${maintenance.id}`)
+    if (maintenance) {
+      router.push(`/manutencao/${maintenance.id}`)
+    }
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
@@ -103,7 +110,7 @@ function handleSubmit() {
 
       <SheetFooter>
         <Button variant="outline" @click="close">Cancelar</Button>
-        <Button @click="handleSubmit">Adicionar</Button>
+        <Button :disabled="isSubmitting" @click="handleSubmit">Adicionar</Button>
       </SheetFooter>
     </template>
   </Sheet>

@@ -4,13 +4,16 @@ import VehicleHeader from '../components/VehicleHeader.vue'
 import VehicleDetailsCard from '../components/VehicleDetailsCard.vue'
 import MaintenanceCard from '../components/MaintenanceCard.vue'
 import VehicleStatsCard from '../components/VehicleStatsCard.vue'
+import { useVehicles } from '../composables/useVehicles'
+
+const { selected, isLoaded } = useVehicles()
 </script>
 
 <template>
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
     <VehicleListCard />
 
-    <main class="flex flex-col gap-6">
+    <main v-if="selected" class="flex flex-col gap-6">
       <VehicleHeader />
 
       <VehicleDetailsCard />
@@ -19,6 +22,10 @@ import VehicleStatsCard from '../components/VehicleStatsCard.vue'
         <MaintenanceCard />
         <VehicleStatsCard />
       </div>
+    </main>
+
+    <main v-else class="flex items-center justify-center rounded-lg border border-dashed border-border p-12 text-sm text-muted-foreground">
+      {{ isLoaded ? 'Sem veículos ainda — adicione o primeiro.' : 'A carregar...' }}
     </main>
   </div>
 </template>

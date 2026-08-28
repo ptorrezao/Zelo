@@ -10,6 +10,11 @@ node_modules/
 .output/
 dist/
 .turbo/
+coverage/
+
+# Testes .NET
+*.coverage.json
+*.opencover.xml
 
 # Ambiente
 .env

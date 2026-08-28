@@ -21,8 +21,17 @@ services:
       target: migrator
     environment:
       ConnectionStrings__Zelo: "Host=db;Port=5432;Database=zelo;Username=zelo;Password=zelo"
+      FeatureFlags__Url: "http://unleash:4242"
+      FeatureFlags__ApiToken: "*:*.unleash-insecure-api-token"
+      Storage__AdminUrl: "http://garage:3903"
+      Storage__AdminToken: "a7cd1d89f750c10d8693ef94d6877b2c"
+      Storage__Bucket: "zelo-documents"
+      Storage__AccessKey: "GK150252b5f2fe57b6e3250b27"
+      Storage__SecretKey: "bd257b59116ab67336fbe92145ffc0f7e4149d599f82070281dedd036af4579c"
     depends_on:
       db: { condition: service_healthy }
+      unleash: { condition: service_started }
+      garage: { condition: service_started }
 
   api:
     build:
@@ -36,13 +45,13 @@ services:
       Messaging__Username: guest
       Messaging__Password: guest
       Messaging__VirtualHost: "/"
-      Storage__Endpoint: "http://garage:3900"
+      Storage__Endpoint: "http://localhost:3900"
       Storage__Region: "garage"
       Storage__Bucket: "zelo-documents"
-      Storage__AccessKey: "GKzeloaccesskey"
-      Storage__SecretKey: "zelosecretkeyzelosecretkeyzelosecretkey"
+      Storage__AccessKey: "GK150252b5f2fe57b6e3250b27"
+      Storage__SecretKey: "bd257b59116ab67336fbe92145ffc0f7e4149d599f82070281dedd036af4579c"
       Otel__Endpoint: "http://jaeger:4317"
-      FeatureFlags__Url: "http://unleash:4242/api"
+      FeatureFlags__Url: "http://unleash:4242"
       FeatureFlags__ApiToken: "*:*.unleash-insecure-api-token"
       Email__SmtpHost: mailhog
       Email__SmtpPort: "1025"
@@ -64,12 +73,14 @@ services:
       Messaging__Username: guest
       Messaging__Password: guest
       Messaging__VirtualHost: "/"
-      Storage__Endpoint: "http://garage:3900"
+      Storage__Endpoint: "http://localhost:3900"
       Storage__Region: "garage"
       Storage__Bucket: "zelo-documents"
-      Storage__AccessKey: "GKzeloaccesskey"
-      Storage__SecretKey: "zelosecretkeyzelosecretkeyzelosecretkey"
+      Storage__AccessKey: "GK150252b5f2fe57b6e3250b27"
+      Storage__SecretKey: "bd257b59116ab67336fbe92145ffc0f7e4149d599f82070281dedd036af4579c"
       Otel__Endpoint: "http://jaeger:4317"
+      FeatureFlags__Url: "http://unleash:4242"
+      FeatureFlags__ApiToken: "*:*.unleash-insecure-api-token"
       Email__SmtpHost: mailhog
       Email__SmtpPort: "1025"
     depends_on:
@@ -92,14 +103,9 @@ services:
       interval: 5s
       retries: 10
 
-  # Armazenamento de documentos (S3-compatible, self-hosted). PRECISA de
-  # bootstrap manual na primeira vez (cluster de 1 nó):
-  #   docker compose exec garage /garage layout assign -z dc1 -c 1G <node-id>
-  #   docker compose exec garage /garage layout apply --version 1
-  #   docker compose exec garage /garage bucket create zelo-documents
-  #   docker compose exec garage /garage key create zelo-api-key
-  #   docker compose exec garage /garage bucket allow --read --write zelo-documents --key zelo-api-key
-  # (node-id obtém-se de `docker compose exec garage /garage status`)
+  # Armazenamento de documentos (S3-compatible, self-hosted). Layout,
+  # bucket e chave sao criados pelo migrator (ver GarageBootstrap.cs) -
+  # nao e preciso nenhum passo manual.
   garage:
     image: dxflrs/garage:v1.0.1
     volumes:

@@ -7,6 +7,7 @@ using Zelo.Messaging;
 using Zelo.Modules.Auto.Application;
 using Zelo.Modules.Auto.Domain;
 using Zelo.Modules.Auto.Infrastructure;
+using Zelo.ServiceDefaults;
 using Zelo.SharedKernel;
 
 namespace Zelo.Modules.Auto.Endpoints;
@@ -18,7 +19,9 @@ public static class AutoEndpoints
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        var group = app.MapGroup("/api/auto").RequireAuthorization();
+        var group = app.MapGroup("/api/auto")
+            .RequireAuthorization()
+            .RequireFeatureFlag("auto-app-enabled");
 
         MapVehicles(group);
         MapMaintenances(group);

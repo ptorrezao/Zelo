@@ -13,6 +13,13 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // So o servidor le isto (nao "public") - o token do Unleash nunca pode
+    // chegar ao browser. Ver server/api/feature-flags.get.ts.
+    unleash: {
+      url: 'http://localhost:4242',
+      apiToken: '*:*.unleash-insecure-api-token',
+      environment: 'development',
+    },
     public: {
       // Onde vive cada modulo. Os valores abaixo servem o desenvolvimento,
       // com cada app na sua porta. Atras do gateway passam a ser os caminhos

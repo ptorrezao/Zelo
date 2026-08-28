@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Card from '@zelo/ui/components/ui/Card.vue'
 import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
 import CardTitle from '@zelo/ui/components/ui/CardTitle.vue'
 import CardContent from '@zelo/ui/components/ui/CardContent.vue'
 import { useVehicles } from '../../composables/useVehicles'
+import type { Maintenance, Vehicle } from '../../types/vehicle'
 
 const route = useRoute()
 const { findMaintenance, fullName } = useVehicles()
 
-const result = computed(() => findMaintenance(route.params.id as string))
+const result = ref<{ vehicle: Vehicle, maintenance: Maintenance } | undefined>()
+watch(() => route.params.id, async (id) => {
+  result.value = await findMaintenance(id as string)
+}, { immediate: true })
+
 const vehicle = computed(() => result.value?.vehicle)
 const maintenance = computed(() => result.value?.maintenance)
 

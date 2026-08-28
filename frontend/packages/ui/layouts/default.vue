@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useRuntimeConfig, useRequestURL, useCookie } from '#app'
 import { Box, Home, LogOut, Truck } from '@lucide/vue'
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../composables/useApiClient'
+import { useFeatureFlags } from '../composables/useFeatureFlags'
 import SidebarProvider from '../components/ui/SidebarProvider.vue'
 import Sidebar from '../components/ui/Sidebar.vue'
 import SidebarRail from '../components/ui/SidebarRail.vue'
@@ -35,11 +36,13 @@ const breadcrumbs = computed(() => {
   ]
 })
 
-const navItems = [
+const { data: featureFlags } = useFeatureFlags()
+
+const navItems = computed(() => [
   { label: 'Início', path: '/', icon: Home, origin: zelo.shell },
-  { label: 'Auto', path: '/', icon: Truck, origin: zelo.auto },
-  { label: 'Inventário', path: '/', icon: Box, origin: zelo.inventory },
-]
+  ...(featureFlags.value.autoAppEnabled ? [{ label: 'Auto', path: '/', icon: Truck, origin: zelo.auto }] : []),
+  ...(featureFlags.value.inventoryAppEnabled ? [{ label: 'Inventário', path: '/', icon: Box, origin: zelo.inventory }] : []),
+])
 
 const isActive = (origin: string) => requestUrl.origin === origin
 

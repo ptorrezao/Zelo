@@ -6,6 +6,7 @@
     <ProjectReference Include="..\..\Zelo.SharedKernel\Zelo.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Zelo.Contracts\Zelo.Contracts.csproj" />
     <ProjectReference Include="..\..\Zelo.Messaging\Zelo.Messaging.csproj" />
+    <ProjectReference Include="..\..\Zelo.ServiceDefaults\Zelo.ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" />

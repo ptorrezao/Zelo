@@ -31,6 +31,12 @@ export default defineNuxtConfig({
       },
       // Base da Zelo.Api. Atras do gateway passa a ser "/api" (ver Caddyfile).
       apiBase: 'http://localhost:8080',
+      // Vazio em dev (localhost) - cookie de auth fica limitado ao host
+      // atual, correto quando cada app corre numa porta diferente. Em
+      // producao (subdominios) tem de ser o dominio partilhado, ex:
+      // ".hugetower.cloud", via NUXT_PUBLIC_COOKIE_DOMAIN - sem isto, o
+      // login feito na shell fica invisivel para a auto/inventory.
+      cookieDomain: '',
     },
   },
 })

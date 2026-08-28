@@ -14,6 +14,7 @@ const client = { POST: vi.fn(), GET: vi.fn() }
 vi.mock('@zelo/ui/composables/useApiClient', () => ({
   ACCESS_TOKEN_COOKIE: 'zelo_access_token',
   REFRESH_TOKEN_COOKIE: 'zelo_refresh_token',
+  authCookieOptions: () => ({}),
   useApiClient: () => client,
 }))
 

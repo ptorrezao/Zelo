@@ -13,6 +13,7 @@ name: deploy
 on:
   push:
     branches: [main, develop]
+  workflow_dispatch:
 
 jobs:
   test-backend:

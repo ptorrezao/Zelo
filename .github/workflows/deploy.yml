@@ -1,0 +1,38 @@
+name: deploy
+
+# O compose da Dokploy (infra/compose/docker-compose.dokploy.yml) sobe a
+# stack toda de uma vez - nao ha como fazer deploy so de uma parte, por
+# isso o deploy so corre a partir daqui, depois de TODOS os testes/builds
+# passarem, e nunca a partir dos workflows por-app individuais.
+
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  test-backend:
+    uses: ./.github/workflows/backend.yml
+
+  test-frontend:
+    uses: ./.github/workflows/frontend-test.yml
+
+  build-shell:
+    uses: ./.github/workflows/frontend-shell.yml
+
+  build-auto:
+    uses: ./.github/workflows/frontend-auto.yml
+
+  build-inventory:
+    uses: ./.github/workflows/frontend-inventory.yml
+
+  deploy:
+    needs: [test-backend, test-frontend, build-shell, build-auto, build-inventory]
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
+    steps:
+      - name: Trigger Dokploy deploy
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/compose.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"composeId\": \"${{ vars.DOKPLOY_COMPOSE_ID }}\"}"

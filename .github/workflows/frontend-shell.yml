@@ -6,6 +6,7 @@ on:
       - "frontend/apps/shell/**"
       - "frontend/packages/**"
       - ".github/workflows/frontend-shell.yml"
+  workflow_call:
 
 jobs:
   build:

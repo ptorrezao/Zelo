@@ -5,6 +5,7 @@ on:
     paths: ["backend/**", "infra/docker/**", ".github/workflows/backend.yml"]
   pull_request:
     paths: ["backend/**"]
+  workflow_call:
 
 jobs:
   build:

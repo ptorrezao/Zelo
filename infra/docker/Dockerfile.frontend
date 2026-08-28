@@ -1,0 +1,51 @@
+# Build unico, tres imagens finais (uma por app Nuxt).
+#   docker build -f infra/docker/Dockerfile.frontend --target shell     -t zelo-shell .
+#   docker build -f infra/docker/Dockerfile.frontend --target auto      -t zelo-auto .
+#   docker build -f infra/docker/Dockerfile.frontend --target inventory -t zelo-inventory .
+
+FROM node:22-slim AS deps
+WORKDIR /src
+RUN corepack enable
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+COPY frontend/apps/shell/package.json apps/shell/package.json
+COPY frontend/apps/auto/package.json apps/auto/package.json
+COPY frontend/apps/inventory/package.json apps/inventory/package.json
+COPY frontend/packages/api-client/package.json packages/api-client/package.json
+COPY frontend/packages/config/package.json packages/config/package.json
+COPY frontend/packages/module-kit/package.json packages/module-kit/package.json
+COPY frontend/packages/ui/package.json packages/ui/package.json
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS build
+WORKDIR /src
+COPY frontend/ .
+
+FROM build AS build-shell
+RUN pnpm --filter @zelo/app-shell build
+
+FROM build AS build-auto
+RUN pnpm --filter @zelo/app-auto build
+
+FROM build AS build-inventory
+RUN pnpm --filter @zelo/app-inventory build
+
+FROM node:22-slim AS shell
+WORKDIR /app
+COPY --from=build-shell /src/apps/shell/.output .
+EXPOSE 3000
+ENV PORT=3000 HOST=0.0.0.0
+ENTRYPOINT ["node", "server/index.mjs"]
+
+FROM node:22-slim AS auto
+WORKDIR /app
+COPY --from=build-auto /src/apps/auto/.output .
+EXPOSE 3000
+ENV PORT=3000 HOST=0.0.0.0
+ENTRYPOINT ["node", "server/index.mjs"]
+
+FROM node:22-slim AS inventory
+WORKDIR /app
+COPY --from=build-inventory /src/apps/inventory/.output .
+EXPOSE 3000
+ENV PORT=3000 HOST=0.0.0.0
+ENTRYPOINT ["node", "server/index.mjs"]

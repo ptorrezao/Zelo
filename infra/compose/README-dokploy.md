@@ -76,7 +76,9 @@ aconteceria com um serviço normal.
 | `Otel__Endpoint` | `http://<hostname do jaeger>:4317` |
 | `FeatureFlags__Url` | `http://<hostname do unleash>:4242` |
 | `FeatureFlags__ApiToken` | mesmo valor de `UNLEASH_API_TOKEN` do compose de infra |
-| `Email__SmtpHost` / `Email__SmtpPort` | relay SMTP real (produção) |
+
+`Email__SmtpHost` / `Email__SmtpPort` só vai na **`api`** (só o módulo
+Identity, que corre lá, envia emails) — relay SMTP real em produção.
 
 **`migrator`**: mesmas `ConnectionStrings__Zelo`, `FeatureFlags__*`, mais:
 

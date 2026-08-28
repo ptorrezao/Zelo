@@ -114,6 +114,22 @@ jobs:
       (needs.changes.outputs.shell == 'true' || needs.changes.outputs.auto == 'true' || needs.changes.outputs.inventory == 'true')
     uses: ./.github/workflows/frontend-test.yml
 
+  # Job sem trabalho real - so para o grafo de dependencias do GitHub
+  # alinhar push-images-backend na mesma coluna dos push-image-* do
+  # frontend (que tem um estagio a mais: build -> test, o backend so tem
+  # test-backend a fazer as duas coisas numa job so).
+  backend-ready:
+    name: "Backend: ready to push"
+    needs: [changes, test-backend]
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "build+test do backend passaram - pronto para publicar as imagens"
+
   # --- Push images (so depois dos testes do respetivo grupo passarem) ---
 
   push-images-backend:
@@ -123,7 +139,7 @@ jobs:
     # expandido no name:, um job saltado (sem matrix expandida) mostrava
     # o texto literal "${{ matrix.service }}" em vez de nada.
     name: "Push image: backend"
-    needs: [changes, test-backend]
+    needs: [changes, backend-ready]
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     permissions:

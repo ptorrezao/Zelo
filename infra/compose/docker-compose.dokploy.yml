@@ -1,158 +1,20 @@
-# Compose usado pela Dokploy (dev e producao) - NAO e o mesmo do
-# desenvolvimento local (ver docker-compose.yml). Diferencas:
-#   - sem "ports": os servicos so falam pela rede interna do Docker: e o
-#     Traefik da Dokploy que os expoe, atraves de um Dominio configurado
-#     na UI dela (aponta para o servico + a porta interna). Publicar portas
-#     no host aqui colidiria entre os ambientes dev/producao na mesma VPS.
+# Compose de INFRA usado pela Dokploy (dev e producao) - so os servicos de
+# suporte que precisam de se falar por nome dentro do mesmo stack (LavinMQ,
+# Garage, Unleash, Jaeger). NAO e o compose de desenvolvimento local (ver
+# docker-compose.yml) nem contem as apps (api/worker/migrator/shell/auto/
+# inventory) - essas sao Applications separadas na Dokploy, uma por app,
+# ver infra/compose/README-dokploy.md. Postgres tambem nao esta aqui -
+# usa a feature nativa "Database" da Dokploy (backups, Internal Host
+# garantido a partir de qualquer Application).
+#
+#   - sem "ports": so fala pela rede interna do Docker - e o Traefik da
+#     Dokploy que expoe o que precisar de ser publico, via Dominio.
 #   - todos os segredos vem de variaveis de ambiente sem valor por omissao -
-#     define-os no painel "Environment Variables" do projecto/environment
-#     na Dokploy, nunca aqui.
-#   - cada app Nuxt fica no dominio raiz que lhe deres na Dokploy (ex:
-#     app.zelo.pt, auto.zelo.pt, inventory.zelo.pt) em vez de sub-caminhos
-#     atras de um gateway - mais simples, sem precisar de manter um Caddy
-#     proprio quando a Dokploy ja tem o Traefik dela.
+#     define-os no painel "Environment Variables" deste Compose na Dokploy.
 
-name: zelo
+name: zelo-infra
 
 services:
-  db:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: zelo
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: zelo
-    volumes: ["pgdata:/var/lib/postgresql/data"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zelo"]
-      interval: 5s
-      retries: 10
-
-  migrator:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile.backend
-      target: migrator
-    environment:
-      ConnectionStrings__Zelo: "Host=db;Port=5432;Database=zelo;Username=zelo;Password=${DB_PASSWORD}"
-      FeatureFlags__Url: "http://unleash:4242"
-      FeatureFlags__ApiToken: ${UNLEASH_API_TOKEN}
-      Storage__AdminUrl: "http://garage:3903"
-      # Nao e um secret escolhivel: tem de bater certo com "admin_token" em
-      # garage.toml (ficheiro estatico montado abaixo). A API admin do
-      # Garage nunca fica exposta fora da rede interna do compose (sem
-      # "ports", sem Dominio na Dokploy), por isso o valor fixo aqui tem o
-      # mesmo nivel de exposicao que a password do Postgres na rede interna.
-      Storage__AdminToken: "a7cd1d89f750c10d8693ef94d6877b2c"
-      Storage__Bucket: "zelo-documents"
-      Storage__AccessKey: ${GARAGE_ACCESS_KEY}
-      Storage__SecretKey: ${GARAGE_SECRET_KEY}
-    depends_on:
-      db: { condition: service_healthy }
-      unleash: { condition: service_started }
-      garage: { condition: service_started }
-
-  api:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile.backend
-      target: api
-    environment:
-      ConnectionStrings__Zelo: "Host=db;Port=5432;Database=zelo;Username=zelo;Password=${DB_PASSWORD}"
-      Messaging__Host: lavinmq
-      Messaging__Port: "5672"
-      # A imagem do LavinMQ nao aceita mudar a password do "guest" por env
-      # var sem um hash pre-calculado - fica-se com guest/guest, igual ao
-      # dev local. Sem "ports"/Domain aqui, so e alcancavel dentro da rede
-      # interna do compose (mesmo nivel de exposicao que a password do
-      # Postgres na mesma rede).
-      Messaging__Username: guest
-      Messaging__Password: guest
-      Messaging__VirtualHost: "/"
-      Storage__Endpoint: ${STORAGE_PUBLIC_ENDPOINT}
-      Storage__Region: "garage"
-      Storage__Bucket: "zelo-documents"
-      Storage__AccessKey: ${GARAGE_ACCESS_KEY}
-      Storage__SecretKey: ${GARAGE_SECRET_KEY}
-      Otel__Endpoint: "http://jaeger:4317"
-      FeatureFlags__Url: "http://unleash:4242"
-      FeatureFlags__ApiToken: ${UNLEASH_API_TOKEN}
-      Email__SmtpHost: ${SMTP_HOST}
-      Email__SmtpPort: ${SMTP_PORT}
-    depends_on:
-      migrator: { condition: service_completed_successfully }
-      lavinmq: { condition: service_healthy }
-      garage: { condition: service_started }
-
-  worker:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile.backend
-      target: worker
-    environment:
-      ConnectionStrings__Zelo: "Host=db;Port=5432;Database=zelo;Username=zelo;Password=${DB_PASSWORD}"
-      Messaging__Host: lavinmq
-      Messaging__Port: "5672"
-      # A imagem do LavinMQ nao aceita mudar a password do "guest" por env
-      # var sem um hash pre-calculado - fica-se com guest/guest, igual ao
-      # dev local. Sem "ports"/Domain aqui, so e alcancavel dentro da rede
-      # interna do compose (mesmo nivel de exposicao que a password do
-      # Postgres na mesma rede).
-      Messaging__Username: guest
-      Messaging__Password: guest
-      Messaging__VirtualHost: "/"
-      Storage__Endpoint: ${STORAGE_PUBLIC_ENDPOINT}
-      Storage__Region: "garage"
-      Storage__Bucket: "zelo-documents"
-      Storage__AccessKey: ${GARAGE_ACCESS_KEY}
-      Storage__SecretKey: ${GARAGE_SECRET_KEY}
-      Otel__Endpoint: "http://jaeger:4317"
-      FeatureFlags__Url: "http://unleash:4242"
-      FeatureFlags__ApiToken: ${UNLEASH_API_TOKEN}
-      Email__SmtpHost: ${SMTP_HOST}
-      Email__SmtpPort: ${SMTP_PORT}
-    depends_on:
-      migrator: { condition: service_completed_successfully }
-      lavinmq: { condition: service_healthy }
-
-  shell:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile.frontend
-      target: shell
-    environment:
-      NUXT_PUBLIC_API_BASE: ${PUBLIC_API_URL}
-      NUXT_PUBLIC_ZELO_SHELL: ${PUBLIC_SHELL_URL}
-      NUXT_PUBLIC_ZELO_AUTO: ${PUBLIC_AUTO_URL}
-      NUXT_PUBLIC_ZELO_INVENTORY: ${PUBLIC_INVENTORY_URL}
-    depends_on:
-      api: { condition: service_started }
-
-  auto:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile.frontend
-      target: auto
-    environment:
-      NUXT_PUBLIC_API_BASE: ${PUBLIC_API_URL}
-      NUXT_PUBLIC_ZELO_SHELL: ${PUBLIC_SHELL_URL}
-      NUXT_PUBLIC_ZELO_AUTO: ${PUBLIC_AUTO_URL}
-      NUXT_PUBLIC_ZELO_INVENTORY: ${PUBLIC_INVENTORY_URL}
-    depends_on:
-      api: { condition: service_started }
-
-  inventory:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile.frontend
-      target: inventory
-    environment:
-      NUXT_PUBLIC_API_BASE: ${PUBLIC_API_URL}
-      NUXT_PUBLIC_ZELO_SHELL: ${PUBLIC_SHELL_URL}
-      NUXT_PUBLIC_ZELO_AUTO: ${PUBLIC_AUTO_URL}
-      NUXT_PUBLIC_ZELO_INVENTORY: ${PUBLIC_INVENTORY_URL}
-    depends_on:
-      api: { condition: service_started }
-
   # Broker de mensagens (ver ADR-0002 / docker-compose.yml local).
   lavinmq:
     image: cloudamqp/lavinmq:latest
@@ -163,7 +25,8 @@ services:
       retries: 10
 
   # Armazenamento de documentos (S3-compatible). Layout/bucket/chave sao
-  # criados pelo migrator (ver GarageBootstrap.cs).
+  # criados pelo migrator (ver GarageBootstrap.cs) - precisa de alcancar
+  # este servico pelo hostname "garage" (ver Network na Application dele).
   garage:
     image: dxflrs/garage:v1.0.1
     volumes:
@@ -177,31 +40,17 @@ services:
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
 
-  # Feature flags self-hosted.
-  unleash-db:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: unleash
-      POSTGRES_PASSWORD: ${UNLEASH_DB_PASSWORD}
-      POSTGRES_DB: unleash
-    volumes: ["unleashdbdata:/var/lib/postgresql/data"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U unleash"]
-      interval: 5s
-      retries: 10
-
+  # Feature flags self-hosted. A base de dados dele (Postgres) vive fora
+  # deste compose, na feature "Database" da Dokploy - ver
+  # UNLEASH_DATABASE_URL no README-dokploy.md.
   unleash:
     image: unleashorg/unleash-server:latest
     environment:
-      DATABASE_URL: "postgres://unleash:${UNLEASH_DB_PASSWORD}@unleash-db:5432/unleash"
+      DATABASE_URL: ${UNLEASH_DATABASE_URL}
       DATABASE_SSL: "false"
       INIT_ADMIN_API_TOKENS: ${UNLEASH_API_TOKEN}
-    depends_on:
-      unleash-db: { condition: service_healthy }
 
 volumes:
-  pgdata:
   lavinmqdata:
   garagemeta:
   garagedata:
-  unleashdbdata:

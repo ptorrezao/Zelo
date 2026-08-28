@@ -1,9 +1,14 @@
 name: deploy
 
-# O compose da Dokploy (infra/compose/docker-compose.dokploy.yml) sobe a
-# stack toda de uma vez - nao ha como fazer deploy so de uma parte, por
-# isso o deploy so corre a partir daqui, depois de TODOS os testes/builds
-# passarem, e nunca a partir dos workflows por-app individuais.
+# Cada app e uma Application propria na Dokploy (nao um compose gigante) -
+# ver infra/compose/README-dokploy.md. O deploy so corre a partir daqui,
+# depois de TODOS os testes/builds passarem, nunca a partir dos workflows
+# por-app individuais.
+#
+# NOTA: cada chamada a API da Dokploy so pede o deploy - nao espera que
+# termine. A ordem abaixo (infra, migrator, api/worker, frontends) e a
+# logica certa mas best-effort, nao ha garantia de que o migrator acabou
+# antes da api arrancar.
 
 on:
   push:
@@ -30,9 +35,51 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
     steps:
-      - name: Trigger Dokploy deploy
+      - name: Deploy infra (LavinMQ, Garage, Jaeger, Unleash)
         run: |
           curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/compose.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"composeId\": \"${{ vars.DOKPLOY_COMPOSE_ID }}\"}"
+            -d "{\"composeId\": \"${{ vars.DOKPLOY_COMPOSE_ID_INFRA }}\"}"
+
+      - name: Deploy migrator
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_MIGRATOR }}\"}"
+
+      - name: Deploy api
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_API }}\"}"
+
+      - name: Deploy worker
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_WORKER }}\"}"
+
+      - name: Deploy shell
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_SHELL }}\"}"
+
+      - name: Deploy auto
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_AUTO }}\"}"
+
+      - name: Deploy inventory
+        run: |
+          curl --fail-with-body -X POST "${{ vars.DOKPLOY_URL }}/api/application.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"${{ vars.DOKPLOY_APP_ID_INVENTORY }}\"}"

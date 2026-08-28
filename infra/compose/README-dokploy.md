@@ -14,12 +14,19 @@ fazer deploy só do que fizer sentido de cada vez.
 
 ## Rede
 
-As Applications, o Compose de infra e as Databases têm de conseguir
-falar-se pelo nome. Em cada Application (`api`, `worker`, `migrator`),
-**Advanced → Network**, aponta para a mesma rede do Compose de infra (o
-nome da rede aparece no painel do Compose). Se o hostname simples (ex.
-`garage`) não resolver depois de fazeres deploy, tenta o prefixo
-`tasks.` (ex. `tasks.garage`) — é um workaround documentado da própria
+Um Compose isolado **não entra automaticamente** na rede partilhada onde
+vivem as Databases nativas e as Applications — é preciso juntar-se à
+`dokploy-network` explicitamente. Já está feito no
+`docker-compose.dokploy.yml` (`networks: [dokploy-network]` em cada
+serviço, com `external: true` porque a rede já existe, criada pela
+própria Dokploy). Sem isto, dá exactamente este erro ao arrancar o
+Unleash: `getaddrinfo EAI_AGAIN <host-do-unleash-db>`.
+
+Em cada Application (`api`, `worker`, `migrator`), **Advanced → Network**,
+aponta também para **`dokploy-network`** (o mesmo nome fixo) — não é a
+"rede do Compose", é a rede partilhada da própria Dokploy. Se o hostname
+simples (ex. `garage`) não resolver depois de fazeres deploy, tenta o
+prefixo `tasks.` (ex. `tasks.garage`) — workaround documentado da própria
 Dokploy para quando o DNS da mesh do Swarm falha.
 
 ## Databases nativas

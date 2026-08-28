@@ -11,6 +11,12 @@
 #     Dokploy que expoe o que precisar de ser publico, via Dominio.
 #   - todos os segredos vem de variaveis de ambiente sem valor por omissao -
 #     define-os no painel "Environment Variables" deste Compose na Dokploy.
+#   - "dokploy-network": um Compose isolado NAO entra automaticamente na
+#     rede partilhada onde vivem as Databases nativas e as Applications -
+#     sem isto, o "unleash" nao resolve o hostname do "unleash-db"
+#     (getaddrinfo EAI_AGAIN) e as Applications (api/worker/migrator) nao
+#     alcancam nenhum destes servicos. external:true porque a rede ja e
+#     criada pela propria Dokploy, nao por este compose.
 
 name: zelo-infra
 
@@ -18,6 +24,7 @@ services:
   # Broker de mensagens (ver ADR-0002 / docker-compose.yml local).
   lavinmq:
     image: cloudamqp/lavinmq:latest
+    networks: [dokploy-network]
     volumes: ["lavinmqdata:/var/lib/lavinmq"]
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5672"]
@@ -29,6 +36,7 @@ services:
   # este servico pelo hostname "garage" (ver Network na Application dele).
   garage:
     image: dxflrs/garage:v1.0.1
+    networks: [dokploy-network]
     volumes:
       - ../docker/garage/garage.toml:/etc/garage.toml:ro
       - garagemeta:/var/lib/garage/meta
@@ -37,6 +45,7 @@ services:
   # Tracing distribuido.
   jaeger:
     image: jaegertracing/all-in-one:latest
+    networks: [dokploy-network]
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
 
@@ -45,10 +54,15 @@ services:
   # UNLEASH_DATABASE_URL no README-dokploy.md.
   unleash:
     image: unleashorg/unleash-server:latest
+    networks: [dokploy-network]
     environment:
       DATABASE_URL: ${UNLEASH_DATABASE_URL}
       DATABASE_SSL: "false"
       INIT_ADMIN_API_TOKENS: ${UNLEASH_API_TOKEN}
+
+networks:
+  dokploy-network:
+    external: true
 
 volumes:
   lavinmqdata:

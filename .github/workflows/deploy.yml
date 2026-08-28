@@ -1,9 +1,10 @@
 name: deploy
 
 # Cada app e uma Application propria na Dokploy (nao um compose gigante) -
-# ver infra/compose/README-dokploy.md. O deploy so corre a partir daqui,
-# depois de TODOS os testes/builds passarem, nunca a partir dos workflows
-# por-app individuais.
+# ver infra/compose/README-dokploy.md. As imagens sao compiladas aqui e
+# publicadas no GHCR - a Dokploy so faz pull, nunca builda a partir do
+# codigo (poupa CPU/RAM da VPS). O deploy so corre depois de TODOS os
+# testes passarem, nunca a partir dos workflows por-app individuais.
 #
 # NOTA: cada chamada a API da Dokploy so pede o deploy - nao espera que
 # termine. A ordem abaixo (infra, migrator, api/worker, frontends) e a
@@ -14,6 +15,10 @@ on:
   push:
     branches: [main, develop]
   workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/zelo
 
 jobs:
   test-backend:
@@ -31,8 +36,47 @@ jobs:
   build-inventory:
     uses: ./.github/workflows/frontend-inventory.yml
 
-  deploy:
+  push-images:
     needs: [test-backend, test-frontend, build-shell, build-auto, build-inventory]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - service: api
+            dockerfile: infra/docker/Dockerfile.backend
+          - service: worker
+            dockerfile: infra/docker/Dockerfile.backend
+          - service: migrator
+            dockerfile: infra/docker/Dockerfile.backend
+          - service: shell
+            dockerfile: infra/docker/Dockerfile.frontend
+          - service: auto
+            dockerfile: infra/docker/Dockerfile.frontend
+          - service: inventory
+            dockerfile: infra/docker/Dockerfile.frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.service }}
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy:
+    needs: push-images
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
     steps:

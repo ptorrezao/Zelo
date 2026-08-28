@@ -58,11 +58,22 @@ Variables**:
 
 ## As 6 Applications — configuração comum
 
-Cada uma: **Build Type → Dockerfile**, aponta para
-`infra/docker/Dockerfile.backend` (api/worker/migrator) ou
-`infra/docker/Dockerfile.frontend` (shell/auto/inventory), com o
-**Docker Build Stage** = nome do target (`api`, `worker`, `migrator`,
-`shell`, `auto`, `inventory`).
+**Não builda a partir do código** (evita gastar CPU/RAM da VPS) — o
+GitHub Actions compila e publica a imagem no GHCR
+(`ghcr.io/ptorrezao/zelo-<app>:<branch>`), a Dokploy só faz `pull`.
+
+Em cada Application, aba de Source, escolhe **Docker** (não "Github") e
+preenche:
+
+| Campo | Valor |
+|---|---|
+| Docker Image | `ghcr.io/ptorrezao/zelo-<app>:develop` (produção usa `:main`) — a tag é o nome do branch |
+
+Substitui `<app>` por `api`, `worker`, `migrator`, `shell`, `auto` ou
+`inventory`. O repo é público, por isso as imagens no GHCR saem públicas
+por omissão — a Dokploy não precisa de credenciais de registry para o
+`pull`. Não precisas de configurar Build Path, Dockerfile Path, Docker
+Context Path nem Watch Paths — nada disso se aplica ao source "Docker".
 
 `migrator`: **Advanced → Swarm Settings → Mode = Replicated Job** (não
 "Replicated") — corre uma vez, termina, e não entra em crash-loop como

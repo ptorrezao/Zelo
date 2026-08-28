@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Mail;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -59,7 +60,15 @@ internal sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSe
         activity?.SetTag("email.kind", kind);
         activity?.SetTag("email.to", toEmail);
 
-        using var client = new SmtpClient(_options.SmtpHost, _options.SmtpPort);
+        using var client = new SmtpClient(_options.SmtpHost, _options.SmtpPort)
+        {
+            EnableSsl = _options.EnableSsl,
+        };
+        // Mailhog (dev local) nao pede autenticacao - so define credenciais
+        // quando um relay real as exigir.
+        if (!string.IsNullOrEmpty(_options.Username))
+            client.Credentials = new NetworkCredential(_options.Username, _options.Password);
+
         using var message = new MailMessage
         {
             From = new MailAddress(_options.FromAddress, _options.FromName),

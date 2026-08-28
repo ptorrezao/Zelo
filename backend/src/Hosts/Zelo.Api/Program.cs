@@ -40,7 +40,7 @@ builder.Services.AddInventoryModule(builder.Configuration);
 
 var app = builder.Build();
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health"); // usado pela Dokploy e por este teste de CI
 app.MapOpenApi(); // /openapi/v1.json - e o que frontend/tools/scripts/gen-api-client.sh consome
 app.UseCors(FrontendCorsPolicy);
 app.UseAuthentication();

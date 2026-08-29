@@ -106,42 +106,54 @@ Identity, que corre lá, envia emails) — relay SMTP real em produção.
 | `Storage__AdminToken` | `a7cd1d89f750c10d8693ef94d6877b2c` (fixo, ver compose de infra) |
 | `Storage__Bucket`, `Storage__AccessKey`, `Storage__SecretKey` | iguais às da `api`/`worker` |
 
-**`shell`, `auto`, `inventory`** (iguais nas três):
+**`shell`, `auto`, `inventory`** — `NUXT_PUBLIC_API_BASE` e os 3
+`NUXT_PUBLIC_ZELO_*` são iguais nas três (mesmo host, path-based routing
+— ver Domains abaixo); só `NUXT_APP_BASE_URL` muda por app:
 
 | Variável | Valor |
 |---|---|
-| `NUXT_PUBLIC_API_BASE` | URL pública da `api` |
-| `NUXT_PUBLIC_ZELO_SHELL` / `_AUTO` / `_INVENTORY` | URLs públicas de cada app |
+| `NUXT_PUBLIC_API_BASE` | URL pública da `api` (subdomínio próprio, fora deste esquema) |
+| `NUXT_PUBLIC_ZELO_SHELL` | `https://<host>` (ex: `https://zelo-dev.hugetower.cloud`) |
+| `NUXT_PUBLIC_ZELO_AUTO` | `https://<host>/auto` |
+| `NUXT_PUBLIC_ZELO_INVENTORY` | `https://<host>/inventory` |
+| `NUXT_APP_BASE_URL` | `shell`: não definir (fica `/`) · `auto`: `/auto/` · `inventory`: `/inventory/` |
+
+`NUXT_PUBLIC_COOKIE_DOMAIN` **não é usado** neste esquema — as 3 apps
+partilham host, por isso o cookie de sessão já funciona sem precisar de
+domain explícito (fica preso ao host por omissão do browser).
 
 ## Domains a configurar (por Application/serviço)
 
-**Importante — nomenclatura aninhada, não paralela.** `shell`/`auto`/
-`inventory` partilham cookies de autenticação entre si dentro do mesmo
-environment (`NUXT_PUBLIC_COOKIE_DOMAIN`, ver `useApiClient.ts`). Um
-`domain` de cookie só consegue isolar por sufixo de DNS — subdomínios
-"irmãos" tipo `appdev.hugetower.cloud` e `app.hugetower.cloud` **não**
-isolam nada entre si nem de outros projectos no mesmo domínio raiz. Por
-isso cada environment vive debaixo do seu próprio sub-domínio dedicado:
+**`shell`/`auto`/`inventory` partilham um único host, um Path cada** —
+routing por Path é nativo da Dokploy (Traefik por baixo), não precisa de
+gateway próprio. **Strip Path desligado nas três** — cada app já sabe
+lidar com o seu próprio prefixo via `NUXT_APP_BASE_URL` (ver secção
+anterior); se a Dokploy tirasse o prefixo antes de encaminhar, a app
+deixava de saber onde está montada e os assets/rotas partiam.
+
+| Serviço | Porta interna | Path | Strip Path |
+|---|---|---|---|
+| `shell` | 3000 | `/` | desligado |
+| `auto` | 3000 | `/auto` | desligado |
+| `inventory` | 3000 | `/inventory` | desligado |
+
+Host (igual nas três, por environment): `zelo-dev.hugetower.cloud` em
+`development`, `zelo.hugetower.cloud` em `production`.
+
+**`api` e `garage` ficam fora deste esquema**, cada um no seu próprio
+subdomínio — meter a API S3 do Garage atrás de um path prefix arrisca
+partir a assinatura SigV4 dos URLs pré-assinados, e a `api` já usa `/api`
+internamente nas suas rotas, não precisa de mais nenhum prefixo:
 
 | Serviço | Porta interna | Domain — `development` | Domain — `production` |
 |---|---|---|---|
-| `shell` | 3000 | `shell.zelo-dev.hugetower.cloud` | `shell.zelo.hugetower.cloud` |
-| `auto` | 3000 | `auto.zelo-dev.hugetower.cloud` | `auto.zelo.hugetower.cloud` |
-| `inventory` | 3000 | `inventory.zelo-dev.hugetower.cloud` | `inventory.zelo.hugetower.cloud` |
 | `api` | 8080 | `api.zelo-dev.hugetower.cloud` | `api.zelo.hugetower.cloud` |
 | `garage` (Compose de infra) | 3900 | `storage.zelo-dev.hugetower.cloud` | `storage.zelo.hugetower.cloud` — **obrigatório**: uploads fazem PUT direto do browser para uma URL pré-assinada; sem isto, falham |
 
-`NUXT_PUBLIC_COOKIE_DOMAIN` em `shell`/`auto`/`inventory`:
-- `development` → `.zelo-dev.hugetower.cloud`
-- `production` → `.zelo.hugetower.cloud`
-
-`zelo-dev.hugetower.cloud` e `zelo.hugetower.cloud` são subdomínios
-**irmãos** (nenhum é sufixo do outro) — por isso um cookie com domínio
-`.zelo-dev.hugetower.cloud` nunca chega a `zelo.hugetower.cloud`, nem a
-qualquer outro projecto teu no mesmo `hugetower.cloud`. Se em vez disso
-usasses algo como `appdev.hugetower.cloud` (sem o ponto extra), o
-`domain` do cookie teria de ser `.hugetower.cloud` para cobrir as 3 apps
-— o que partilharia a sessão com literalmente tudo o resto nesse domínio.
+Como a `api` fica numa origem diferente das 3 apps Nuxt, o CORS continua
+necessário — `Cors__AllowedOrigins__0` na `api` aponta para
+`https://zelo-dev.hugetower.cloud` (ou `https://zelo.hugetower.cloud` em
+produção); como as 3 apps agora partilham essa origem, basta uma entrada.
 
 `worker` e `migrator` não servem HTTP, sem Domain. Do Compose de infra,
 só `garage:3900` precisa de Domain — `lavinmq`, `jaeger` e `unleash`

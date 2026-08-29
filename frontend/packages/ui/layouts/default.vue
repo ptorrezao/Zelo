@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useRuntimeConfig, useRequestURL, useCookie } from '#app'
+import { useRuntimeConfig, useCookie } from '#app'
 import { Box, Home, LogOut, Truck } from '@lucide/vue'
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../composables/useApiClient'
 import { useFeatureFlags } from '../composables/useFeatureFlags'
@@ -23,7 +23,6 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const zelo = config.public.zelo as { shell: string; auto: string; inventory: string }
 const appVersion = config.public.appVersion as string
-const requestUrl = useRequestURL()
 
 const breadcrumbs = computed(() => {
   const parts = route.path.split('/').filter(Boolean)
@@ -40,15 +39,15 @@ const breadcrumbs = computed(() => {
 const { data: featureFlags } = useFeatureFlags()
 
 const navItems = computed(() => [
-  { label: 'Início', path: '/', icon: Home, origin: zelo.shell },
-  ...(featureFlags.value.autoAppEnabled ? [{ label: 'Auto', path: '/', icon: Truck, origin: zelo.auto }] : []),
-  ...(featureFlags.value.inventoryAppEnabled ? [{ label: 'Inventário', path: '/', icon: Box, origin: zelo.inventory }] : []),
+  { label: 'Início', path: '/', icon: Home, origin: zelo.shell, baseURL: '/' },
+  ...(featureFlags.value.autoAppEnabled ? [{ label: 'Auto', path: '/', icon: Truck, origin: zelo.auto, baseURL: '/auto/' }] : []),
+  ...(featureFlags.value.inventoryAppEnabled ? [{ label: 'Inventário', path: '/', icon: Box, origin: zelo.inventory, baseURL: '/inventory/' }] : []),
 ])
 
-// Por host, nao por origin completo - ver comentario equivalente em
-// middleware/auth.global.ts sobre o SSR ver um protocolo diferente do
-// browser atras do proxy da Dokploy.
-const isActive = (origin: string) => requestUrl.host === new URL(origin).host
+// As 3 apps vivem no mesmo host, em paths diferentes (routing por Path na
+// Dokploy) - o item ativo e o que corresponde ao NUXT_APP_BASE_URL desta
+// instancia, nao ao host do pedido (que e sempre igual para as tres).
+const isActive = (itemBaseURL: string) => config.app.baseURL === itemBaseURL
 
 const handleLogout = () => {
   // So daqui - nao pela useAuth() da shell, porque este layout tambem
@@ -77,7 +76,7 @@ const handleLogout = () => {
               <SidebarMenuItem v-for="item in navItems" :key="item.origin">
                 <SidebarMenuButton
                   :href="item.origin + item.path"
-                  :is-active="isActive(item.origin)"
+                  :is-active="isActive(item.baseURL)"
                   :tooltip="item.label"
                 >
                   <component :is="item.icon" class="h-4 w-4" />

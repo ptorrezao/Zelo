@@ -115,13 +115,33 @@ Identity, que corre lá, envia emails) — relay SMTP real em produção.
 
 ## Domains a configurar (por Application/serviço)
 
-| Serviço | Porta interna | Domain sugerido |
-|---|---|---|
-| `shell` | 3000 | `app.zelo.pt` |
-| `auto` | 3000 | `auto.zelo.pt` |
-| `inventory` | 3000 | `inventory.zelo.pt` |
-| `api` | 8080 | `api.zelo.pt` |
-| `garage` (no Compose de infra) | 3900 | `storage.zelo.pt` — **obrigatório**: uploads fazem PUT direto do browser para uma URL pré-assinada; sem isto, falham |
+**Importante — nomenclatura aninhada, não paralela.** `shell`/`auto`/
+`inventory` partilham cookies de autenticação entre si dentro do mesmo
+environment (`NUXT_PUBLIC_COOKIE_DOMAIN`, ver `useApiClient.ts`). Um
+`domain` de cookie só consegue isolar por sufixo de DNS — subdomínios
+"irmãos" tipo `appdev.hugetower.cloud` e `app.hugetower.cloud` **não**
+isolam nada entre si nem de outros projectos no mesmo domínio raiz. Por
+isso cada environment vive debaixo do seu próprio sub-domínio dedicado:
+
+| Serviço | Porta interna | Domain — `development` | Domain — `production` |
+|---|---|---|---|
+| `shell` | 3000 | `shell.zelo-dev.hugetower.cloud` | `shell.zelo.hugetower.cloud` |
+| `auto` | 3000 | `auto.zelo-dev.hugetower.cloud` | `auto.zelo.hugetower.cloud` |
+| `inventory` | 3000 | `inventory.zelo-dev.hugetower.cloud` | `inventory.zelo.hugetower.cloud` |
+| `api` | 8080 | `api.zelo-dev.hugetower.cloud` | `api.zelo.hugetower.cloud` |
+| `garage` (Compose de infra) | 3900 | `storage.zelo-dev.hugetower.cloud` | `storage.zelo.hugetower.cloud` — **obrigatório**: uploads fazem PUT direto do browser para uma URL pré-assinada; sem isto, falham |
+
+`NUXT_PUBLIC_COOKIE_DOMAIN` em `shell`/`auto`/`inventory`:
+- `development` → `.zelo-dev.hugetower.cloud`
+- `production` → `.zelo.hugetower.cloud`
+
+`zelo-dev.hugetower.cloud` e `zelo.hugetower.cloud` são subdomínios
+**irmãos** (nenhum é sufixo do outro) — por isso um cookie com domínio
+`.zelo-dev.hugetower.cloud` nunca chega a `zelo.hugetower.cloud`, nem a
+qualquer outro projecto teu no mesmo `hugetower.cloud`. Se em vez disso
+usasses algo como `appdev.hugetower.cloud` (sem o ponto extra), o
+`domain` do cookie teria de ser `.hugetower.cloud` para cobrir as 3 apps
+— o que partilharia a sessão com literalmente tudo o resto nesse domínio.
 
 `worker` e `migrator` não servem HTTP, sem Domain. Do Compose de infra,
 só `garage:3900` precisa de Domain — `lavinmq`, `jaeger` e `unleash`

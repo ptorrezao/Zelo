@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('#app', () => ({
+  useRuntimeConfig: () => ({ app: { baseURL: '/' } }),
+}))
+
 const client = { GET: vi.fn(), POST: vi.fn(), PUT: vi.fn() }
 vi.mock('@zelo/ui/composables/useApiClient', () => ({
   useApiClient: () => client,

@@ -22,6 +22,56 @@ infra/                   Dockerfiles, compose de dev, deploy na Dokploy
 docs/adr/                decisões de arquitetura e o porquê de cada uma
 ```
 
+```mermaid
+flowchart TB
+    Browser(["Browser"])
+
+    subgraph Frontend["Frontend — Nuxt (path-based routing, um host)"]
+        Shell["Shell · /"]
+        Auto["Auto · /auto"]
+        Inventory["Inventory · /inventory"]
+    end
+
+    subgraph Backend["Backend — .NET"]
+        Api["Api<br/>(REST, /api/*)"]
+        Worker["Worker<br/>(consumidor AMQP)"]
+        Migrator["MigrationRunner<br/>(migrations + bootstrap, one-shot)"]
+
+        subgraph Modules["Modules (bibliotecas, nunca se referenciam entre si)"]
+            Identity["Identity"]
+            Core["Core"]
+            AutoMod["Auto"]
+            InventoryMod["Inventory"]
+        end
+    end
+
+    subgraph Infra["Infraestrutura de suporte"]
+        Postgres[("PostgreSQL")]
+        LavinMQ{{"LavinMQ<br/>tópico zelo.events"}}
+        Garage[("Garage<br/>S3-compatible")]
+        Unleash["Unleash<br/>feature flags"]
+        Jaeger["Jaeger<br/>tracing (OTel)"]
+    end
+
+    Browser --> Shell & Auto & Inventory
+    Shell -. navegação entre apps .-> Auto & Inventory
+    Shell & Auto & Inventory -->|fetch| Api
+
+    Api --> Modules
+    Worker --> Modules
+    Migrator -.->|migrations + bootstrap| Postgres & Garage & Unleash
+
+    Api --> Postgres
+    Api --> Garage
+    Api --> Unleash
+    Api -- publica eventos --> LavinMQ
+    LavinMQ -- consome eventos --> Worker
+    Worker --> Postgres
+
+    Api -. traces .-> Jaeger
+    Worker -. traces .-> Jaeger
+```
+
 ## Stack
 
 | | |

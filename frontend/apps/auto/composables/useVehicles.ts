@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { useRuntimeConfig } from '#app'
 import { useApiClient } from '@zelo/ui/composables/useApiClient'
 import type { components } from '@zelo/api-client'
 import type { Maintenance, Vehicle, VehicleDocument, VehicleGroup } from '../types/vehicle'
@@ -301,12 +302,19 @@ function fullName(vehicle: Vehicle) {
   return `${vehicle.brand} ${vehicle.model}`
 }
 
+// Path absoluto normal ("/vehicles/...") so funciona quando a app vive na
+// raiz do dominio - com routing por Path (NUXT_APP_BASE_URL=/auto/), o
+// browser pedia-o em "/vehicles/..." (raiz do dominio, apanhado pela
+// shell) em vez de "/auto/vehicles/...". Prefixar com o baseURL da app
+// corrige isto nos dois casos (raiz e sub-path).
 function photoFor(vehicle: Vehicle) {
-  return `/vehicles/${slugify(fullName(vehicle))}.png`
+  const baseURL = useRuntimeConfig().app.baseURL
+  return `${baseURL}vehicles/${slugify(fullName(vehicle))}.png`
 }
 
 function logoFor(vehicle: Vehicle) {
-  return `/brands/${slugify(vehicle.brand)}.png`
+  const baseURL = useRuntimeConfig().app.baseURL
+  return `${baseURL}brands/${slugify(vehicle.brand)}.png`
 }
 
 function formatConsumption(value: number) {

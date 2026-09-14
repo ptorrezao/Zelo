@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -14,8 +14,8 @@ namespace Zelo.Modules.Auto.Infrastructure.Migrations
                 name: "Color",
                 schema: "auto",
                 table: "vehicles",
-                type: "character varying(30)",
-                maxLength: 30,
+                type: "character varying(50)",
+                maxLength: 50,
                 nullable: true);
         }
 

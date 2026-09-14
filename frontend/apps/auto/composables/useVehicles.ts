@@ -16,7 +16,10 @@ export interface VehicleFormInput {
   registered: string
   nextInspection: string
   insurer: string
-  insuranceRenewal: string
+  insurancePolicyNumber: string
+  insurancePeriodStart: string
+  insurancePeriodEnd: string
+  insurancePremium: string
   iucDueDate: string
 }
 
@@ -44,7 +47,10 @@ function mapVehicleFromApi(dto: ApiVehicle): Vehicle {
     registered: fromIso(dto.registered),
     nextInspection: fromIso(dto.nextInspection),
     insurer: dto.insurer || '—',
-    insuranceRenewal: fromIso(dto.insuranceRenewal),
+    insurancePolicyNumber: dto.insurancePolicyNumber || '—',
+    insurancePeriodStart: fromIso(dto.insurancePeriodStart),
+    insurancePeriodEnd: fromIso(dto.insurancePeriodEnd),
+    insurancePremium: dto.insurancePremium != null ? formatCostValue(Number(dto.insurancePremium)) : '—',
     iucDueDate: fromIso(dto.iucDueDate),
     odometer: formatKmValue(Number(dto.odometer)),
     maintenances: [],
@@ -225,7 +231,10 @@ export function useVehicles() {
         registered: toIso(input.registered) ?? new Date().toISOString().slice(0, 10),
         nextInspection: toIso(input.nextInspection),
         insurer: input.insurer || null,
-        insuranceRenewal: toIso(input.insuranceRenewal),
+        insurancePolicyNumber: input.insurancePolicyNumber || null,
+        insurancePeriodStart: toIso(input.insurancePeriodStart),
+        insurancePeriodEnd: toIso(input.insurancePeriodEnd),
+        insurancePremium: input.insurancePremium ? parseCostValue(input.insurancePremium) : null,
         iucDueDate: toIso(input.iucDueDate),
       },
     })
@@ -251,7 +260,10 @@ export function useVehicles() {
         registered: toIso(input.registered) ?? new Date().toISOString().slice(0, 10),
         nextInspection: toIso(input.nextInspection),
         insurer: input.insurer || null,
-        insuranceRenewal: toIso(input.insuranceRenewal),
+        insurancePolicyNumber: input.insurancePolicyNumber || null,
+        insurancePeriodStart: toIso(input.insurancePeriodStart),
+        insurancePeriodEnd: toIso(input.insurancePeriodEnd),
+        insurancePremium: input.insurancePremium ? parseCostValue(input.insurancePremium) : null,
         iucDueDate: toIso(input.iucDueDate),
       },
     })

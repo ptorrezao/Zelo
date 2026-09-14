@@ -151,7 +151,8 @@ internal sealed class ImportRemoteClient(HttpClient http, IHostEnvironment envir
         var vehicles = await response.Content.ReadFromJsonAsync<List<RemoteVehicleResponse>>(JsonOptions, ct) ?? [];
         return [.. vehicles.Select(v => new ImportCandidateVehicle(
             v.Category, v.Brand, v.Model, v.Plate, v.Vin, v.Color, v.Driver, v.Odometer,
-            v.Registered, v.NextInspection, v.Insurer, v.InsuranceRenewal, v.IucDueDate))];
+            v.Registered, v.NextInspection, v.Insurer, v.InsurancePolicyNumber,
+            v.InsurancePeriodStart, v.InsurancePeriodEnd, v.InsurancePremium, v.IucDueDate))];
     }
 
     private async Task EnsureSafeAsync(Uri baseUrl, CancellationToken ct)
@@ -222,6 +223,9 @@ internal sealed class ImportRemoteClient(HttpClient http, IHostEnvironment envir
         DateOnly Registered,
         DateOnly? NextInspection,
         string? Insurer,
-        DateOnly? InsuranceRenewal,
+        string? InsurancePolicyNumber,
+        DateOnly? InsurancePeriodStart,
+        DateOnly? InsurancePeriodEnd,
+        decimal? InsurancePremium,
         DateOnly? IucDueDate);
 }

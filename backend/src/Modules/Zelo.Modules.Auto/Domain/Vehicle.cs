@@ -16,7 +16,10 @@ internal sealed class Vehicle
     public DateOnly Registered { get; set; }
     public DateOnly? NextInspection { get; set; }
     public string? Insurer { get; set; }
-    public DateOnly? InsuranceRenewal { get; set; }
+    public string? InsurancePolicyNumber { get; set; }
+    public DateOnly? InsurancePeriodStart { get; set; }
+    public DateOnly? InsurancePeriodEnd { get; set; }
+    public decimal? InsurancePremium { get; set; }
     public DateOnly? IucDueDate { get; set; }
     public DateTimeOffset CreatedAt { get; init; }
 

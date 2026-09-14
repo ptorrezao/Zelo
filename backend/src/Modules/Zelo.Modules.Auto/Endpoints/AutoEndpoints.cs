@@ -20,16 +20,41 @@ public static class AutoEndpoints
         MapDocuments(group);
         MapStats(group);
 
+        // Referencia estatica (marcas/modelos), nao dados de household -
+        // sem RequireHouseholdMembership, so a autenticacao normal do grupo.
+        group.MapGet("/vehicle-catalog", AutoEndpointHandlers.GetVehicleCatalog);
+
+        // Grupo versionado (/api/v1/...) - so os endpoints de importacao
+        // vivem aqui para ja: precisam de ser distinguiveis por versao,
+        // porque sao chamados por outro deployment desta app que pode
+        // ainda nao os ter (ver ImportRemoteClient). O resto do Auto fica
+        // sem prefixo de versao por agora.
+        var importGroup = app.MapGroup("/api/v1/auto")
+            .RequireAuthorization()
+            .RequireFeatureFlag("auto-app-enabled")
+            .RequireHouseholdMembership();
+
+        MapImport(importGroup);
+
         return app;
     }
 
     private static void MapVehicles(RouteGroupBuilder group)
     {
-        group.MapGet("/vehicles", AutoEndpointHandlers.GetVehicles);
-        group.MapPost("/vehicles", AutoEndpointHandlers.CreateVehicle);
+        // householdId (destino/filtro) so existe nestas duas - as de baixo
+        // sao so por {id}, sem household nenhum a validar aqui (gap maior,
+        // ver NOTA de seguranca no ficheiro de plano/PR).
+        group.MapGet("/vehicles", AutoEndpointHandlers.GetVehicles).RequireHouseholdMembership();
+        group.MapPost("/vehicles", AutoEndpointHandlers.CreateVehicle).RequireHouseholdMembership();
         group.MapGet("/vehicles/{id:guid}", AutoEndpointHandlers.GetVehicle);
         group.MapPut("/vehicles/{id:guid}", AutoEndpointHandlers.UpdateVehicle);
         group.MapDelete("/vehicles/{id:guid}", AutoEndpointHandlers.DeleteVehicle);
+    }
+
+    private static void MapImport(RouteGroupBuilder group)
+    {
+        group.MapPost("/vehicles/import/preview", AutoEndpointHandlers.PreviewImport);
+        group.MapPost("/vehicles/import/confirm", AutoEndpointHandlers.ConfirmImport);
     }
 
     private static void MapMaintenances(RouteGroupBuilder group)

@@ -11,6 +11,7 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
         builder.ToTable("households");
         builder.HasKey(h => h.Id);
         builder.Property(h => h.Name).HasMaxLength(200).IsRequired();
+        builder.Property(h => h.IsDefault).HasDefaultValue(false);
 
         builder.HasMany(h => h.Members)
             .WithOne(m => m.Household)

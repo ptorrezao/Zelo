@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Zelo.Contracts;
@@ -5,6 +6,7 @@ using Zelo.Messaging;
 using Zelo.Modules.Auto.Application;
 using Zelo.Modules.Auto.Domain;
 using Zelo.Modules.Auto.Infrastructure;
+using Zelo.Modules.Auto.Infrastructure.VehicleCatalog;
 using Zelo.SharedKernel;
 
 namespace Zelo.Modules.Auto.Endpoints;
@@ -14,6 +16,8 @@ namespace Zelo.Modules.Auto.Endpoints;
 /// sem precisar de um WebApplicationFactory.
 internal static class AutoEndpointHandlers
 {
+    public static IResult GetVehicleCatalog() => Results.Ok(VehicleCatalogLoader.Get());
+
     public static async Task<List<VehicleResponse>> GetVehicles(Guid householdId, AutoDbContext db, CancellationToken ct) =>
         await db.Vehicles
             .Where(v => v.HouseholdId == householdId)
@@ -22,6 +26,16 @@ internal static class AutoEndpointHandlers
             .ToListAsync(ct);
 
     public static async Task<IResult> CreateVehicle(
+        Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
+    {
+        var vehicle = await CreateVehicleEntityAsync(householdId, request, db, events, ct);
+        return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle));
+    }
+
+    /// Construcao/persistencia partilhada entre CreateVehicle e ConfirmImport
+    /// - as duas precisam exatamente da mesma logica (entidade + sync de
+    /// inspecao + eventos), a segunda so difere em nao devolver um IResult.
+    private static async Task<Vehicle> CreateVehicleEntityAsync(
         Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
     {
         var vehicle = new Vehicle
@@ -33,12 +47,16 @@ internal static class AutoEndpointHandlers
             Model = request.Model,
             Plate = request.Plate,
             Vin = request.Vin,
+            Color = request.Color,
             Driver = request.Driver,
             Odometer = request.Odometer,
             Registered = request.Registered,
             NextInspection = request.NextInspection,
             Insurer = request.Insurer,
-            InsuranceRenewal = request.InsuranceRenewal,
+            InsurancePolicyNumber = request.InsurancePolicyNumber,
+            InsurancePeriodStart = request.InsurancePeriodStart,
+            InsurancePeriodEnd = request.InsurancePeriodEnd,
+            InsurancePremium = request.InsurancePremium,
             IucDueDate = request.IucDueDate,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -53,7 +71,7 @@ internal static class AutoEndpointHandlers
             await PublishObligationEventAsync(events, obligationEvent, ct);
         }
 
-        return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle));
+        return vehicle;
     }
 
     public static async Task<IResult> GetVehicle(Guid id, AutoDbContext db, CancellationToken ct) =>
@@ -71,12 +89,16 @@ internal static class AutoEndpointHandlers
         vehicle.Model = request.Model;
         vehicle.Plate = request.Plate;
         vehicle.Vin = request.Vin;
+        vehicle.Color = request.Color;
         vehicle.Driver = request.Driver;
         vehicle.Odometer = request.Odometer;
         vehicle.Registered = request.Registered;
         vehicle.NextInspection = request.NextInspection;
         vehicle.Insurer = request.Insurer;
-        vehicle.InsuranceRenewal = request.InsuranceRenewal;
+        vehicle.InsurancePolicyNumber = request.InsurancePolicyNumber;
+        vehicle.InsurancePeriodStart = request.InsurancePeriodStart;
+        vehicle.InsurancePeriodEnd = request.InsurancePeriodEnd;
+        vehicle.InsurancePremium = request.InsurancePremium;
         vehicle.IucDueDate = request.IucDueDate;
 
         var obligationEvent = VehicleEvents.SyncInspectionObligation(vehicle);
@@ -100,6 +122,100 @@ internal static class AutoEndpointHandlers
         await events.PublishAsync(VehicleEvents.Archived(vehicle), ct);
 
         return Results.NoContent();
+    }
+
+    public static async Task<IResult> PreviewImport(
+        Guid householdId, ImportConnectRequest request, ClaimsPrincipal caller,
+        AutoDbContext db, IImportRemoteClient remoteClient, CancellationToken ct)
+    {
+        // O utilizador nao pode importar de si mesmo - seria sempre um
+        // no-op (os "veiculos de origem" ja sao os dele) e so serviria
+        // para confundir. Comparamos pelo email de login, nao pelo id -
+        // não sabemos o id do lado remoto sem autenticar lá primeiro, e
+        // aqui queremos bloquear ANTES de sequer tentar ligar.
+        var callerEmail = caller.FindFirstValue(ClaimTypes.Email) ?? caller.FindFirstValue(ClaimTypes.Name);
+        if (!string.IsNullOrEmpty(callerEmail) && string.Equals(callerEmail, request.Email, StringComparison.OrdinalIgnoreCase))
+            return Results.BadRequest(new { error = "Não pode importar veículos de si mesmo — indique as credenciais de outro utilizador." });
+
+        if (!Uri.TryCreate(request.BaseUrl, UriKind.Absolute, out var baseUrl))
+            return Results.BadRequest(new { error = "URL do ambiente de origem inválido." });
+
+        try
+        {
+            // O utilizador cola o URL do site que usa (ex. https://auto.zelo.pt),
+            // nao o da API por trás dele - resolve-se aqui automaticamente
+            // (ver environment-info.get.ts no frontend). Se a descoberta
+            // falhar (site mais antigo, ou o utilizador ja colou diretamente
+            // o URL da API), fica-se com o URL original tal como veio.
+            var apiBaseUrl = await remoteClient.ResolveApiBaseAsync(baseUrl, ct);
+            var token = await remoteClient.LoginAsync(apiBaseUrl, request.Email, request.Password, ct);
+
+            Guid remoteHouseholdId;
+            if (request.RemoteHouseholdId is { } chosen)
+            {
+                remoteHouseholdId = chosen;
+            }
+            else
+            {
+                var households = await remoteClient.GetHouseholdsAsync(apiBaseUrl, token, ct);
+                if (households.Count == 0)
+                    return Results.BadRequest(new { error = "O utilizador de origem não pertence a nenhum household." });
+
+                if (households.Count > 1)
+                    return Results.Ok(new ImportPreviewResponse(ImportPreviewStatus.ChooseHousehold, households, []));
+
+                remoteHouseholdId = households[0].Id;
+            }
+
+            var remoteVehicles = await remoteClient.GetVehiclesAsync(apiBaseUrl, remoteHouseholdId, token, ct);
+
+            var localPlates = await db.Vehicles
+                .Where(v => v.HouseholdId == householdId)
+                .Select(v => v.Plate)
+                .ToListAsync(ct);
+            var localPlateSet = new HashSet<string>(localPlates, StringComparer.OrdinalIgnoreCase);
+
+            var items = remoteVehicles
+                .Select(v => new ImportPreviewItem(v, localPlateSet.Contains(v.Plate)))
+                .ToList();
+
+            return Results.Ok(new ImportPreviewResponse(ImportPreviewStatus.VehiclesReady, [], items));
+        }
+        catch (ImportRemoteException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
+    public static async Task<IResult> ConfirmImport(Guid householdId, ImportConfirmRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
+    {
+        var localPlates = await db.Vehicles
+            .Where(v => v.HouseholdId == householdId)
+            .Select(v => v.Plate)
+            .ToListAsync(ct);
+        var seenPlates = new HashSet<string>(localPlates, StringComparer.OrdinalIgnoreCase);
+
+        var results = new List<ImportResultItem>();
+        foreach (var candidate in request.Vehicles)
+        {
+            if (!seenPlates.Add(candidate.Plate))
+            {
+                results.Add(new ImportResultItem(candidate.Plate, false, "Matrícula já existe"));
+                continue;
+            }
+
+            var upsertRequest = new VehicleUpsertRequest(
+                candidate.Category, candidate.Brand, candidate.Model, candidate.Plate, candidate.Vin,
+                candidate.Color, candidate.Driver, candidate.Odometer, candidate.Registered, candidate.NextInspection,
+                candidate.Insurer, candidate.InsurancePolicyNumber, candidate.InsurancePeriodStart,
+                candidate.InsurancePeriodEnd, candidate.InsurancePremium, candidate.IucDueDate);
+
+            await CreateVehicleEntityAsync(householdId, upsertRequest, db, events, ct);
+            results.Add(new ImportResultItem(candidate.Plate, true, null));
+        }
+
+        var importedCount = results.Count(r => r.Imported);
+        return Results.Ok(new ImportConfirmResponse(importedCount, results.Count - importedCount, results));
     }
 
     public static async Task<List<MaintenanceResponse>> GetMaintenances(Guid vehicleId, AutoDbContext db, CancellationToken ct) =>

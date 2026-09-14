@@ -151,4 +151,39 @@ public class EventHandlerTests
         Assert.Equal(new DateOnly(2027, 1, 5), obligation.CompletedOn);
         Assert.Equal(45.00m, obligation.Cost);
     }
+
+    [Fact]
+    public async Task HouseholdDeletedHandler_ReatribuiAssetsEObligationsParaOPredefinido()
+    {
+        await using var db = NewDb();
+        var oldHouseholdId = Guid.NewGuid();
+        var defaultHouseholdId = Guid.NewGuid();
+        var asset = new Domain.Asset { Id = Guid.NewGuid(), HouseholdId = oldHouseholdId, Module = "auto", AssetType = "vehicle", Name = "X" };
+        var obligation = new Domain.Obligation { Id = Guid.NewGuid(), HouseholdId = oldHouseholdId, AssetId = asset.Id, Module = "auto", Title = "Inspeção", DueOn = new DateOnly(2027, 1, 1) };
+        db.Assets.Add(asset);
+        db.Obligations.Add(obligation);
+        await db.SaveChangesAsync();
+        var handler = new HouseholdDeletedHandler(db);
+
+        await handler.HandleAsync(
+            new HouseholdDeleted(Guid.NewGuid(), DateTimeOffset.UtcNow, oldHouseholdId, defaultHouseholdId),
+            CancellationToken.None);
+
+        Assert.Equal(defaultHouseholdId, (await db.Assets.FindAsync(asset.Id))!.HouseholdId);
+        Assert.Equal(defaultHouseholdId, (await db.Obligations.FindAsync(obligation.Id))!.HouseholdId);
+    }
+
+    [Fact]
+    public async Task HouseholdDeletedHandler_SemItensNoHousehold_NaoFazNada()
+    {
+        await using var db = NewDb();
+        var handler = new HouseholdDeletedHandler(db);
+
+        await handler.HandleAsync(
+            new HouseholdDeleted(Guid.NewGuid(), DateTimeOffset.UtcNow, Guid.NewGuid(), Guid.NewGuid()),
+            CancellationToken.None);
+
+        Assert.Equal(0, await db.Assets.CountAsync());
+        Assert.Equal(0, await db.Obligations.CountAsync());
+    }
 }

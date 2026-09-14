@@ -45,3 +45,13 @@ public sealed record ObligationCompleted(
     Guid HouseholdId,
     DateOnly CompletedOn,
     decimal? Cost) : IIntegrationEvent;
+
+/// Emitido quando um household nao-predefinido e eliminado. Todos os
+/// modulos com itens presos a HouseholdId (Auto, Core) reatribuem-nos a
+/// ReplacementHouseholdId em vez de os deixar orfaos - ver
+/// module-contract.md sobre HouseholdId nao ser uma FK entre modulos.
+public sealed record HouseholdDeleted(
+    Guid EventId,
+    DateTimeOffset OccurredAt,
+    Guid HouseholdId,
+    Guid ReplacementHouseholdId) : IIntegrationEvent;

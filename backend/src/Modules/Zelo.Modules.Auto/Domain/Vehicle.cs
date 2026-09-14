@@ -3,19 +3,23 @@ namespace Zelo.Modules.Auto.Domain;
 internal sealed class Vehicle
 {
     public Guid Id { get; init; }
-    public Guid HouseholdId { get; init; }
+    public Guid HouseholdId { get; set; }
     public required VehicleCategory Category { get; set; }
     public required string Brand { get; set; }
     public required string Model { get; set; }
     public required string Plate { get; set; }
     public required string Vin { get; set; }
     public VehicleStatus Status { get; set; } = VehicleStatus.Ativo;
+    public string? Color { get; set; }
     public string? Driver { get; set; }
     public int Odometer { get; set; }
     public DateOnly Registered { get; set; }
     public DateOnly? NextInspection { get; set; }
     public string? Insurer { get; set; }
-    public DateOnly? InsuranceRenewal { get; set; }
+    public string? InsurancePolicyNumber { get; set; }
+    public DateOnly? InsurancePeriodStart { get; set; }
+    public DateOnly? InsurancePeriodEnd { get; set; }
+    public decimal? InsurancePremium { get; set; }
     public DateOnly? IucDueDate { get; set; }
     public DateTimeOffset CreatedAt { get; init; }
 

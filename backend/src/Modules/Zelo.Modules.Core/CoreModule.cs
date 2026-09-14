@@ -36,6 +36,7 @@ public static class CoreModule
         services.AddZeloEventHandler<ObligationScheduled, ObligationScheduledHandler>("core.obligationscheduled");
         services.AddZeloEventHandler<ObligationUpdated, ObligationUpdatedHandler>("core.obligationupdated");
         services.AddZeloEventHandler<ObligationCompleted, ObligationCompletedHandler>("core.obligationcompleted");
+        services.AddZeloEventHandler<HouseholdDeleted, HouseholdDeletedHandler>("core.householddeleted");
         return services;
     }
 

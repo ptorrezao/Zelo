@@ -47,10 +47,14 @@ export interface Vehicle {
   plate: string
   status: string
   vin: string
+  color: string
   registered: string
   nextInspection: string
   insurer: string
-  insuranceRenewal: string
+  insurancePolicyNumber: string
+  insurancePeriodStart: string
+  insurancePeriodEnd: string
+  insurancePremium: string
   iucDueDate: string
   odometer: string
   maintenances: Maintenance[]

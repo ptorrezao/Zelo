@@ -39,6 +39,23 @@ public class EmailLayoutTests
     }
 
     [Fact]
+    public void Render_NaoCodificaOButtonUrl_ParaNaoPartirLinksJaCodificadosPeloIdentity()
+    {
+        // O ASP.NET Core Identity (MapIdentityApi) entrega o link de
+        // confirmacao/reset ja com HtmlEncoder aplicado - se Render
+        // voltasse a codificar, "&" (a separar userId de code) viraria
+        // "&amp;amp;", e o browser deixava de reconhecer o parametro "code".
+        var jaCodificado = "https://zelo.pt/api/auth/confirmEmail?userId=1&amp;code=abc123";
+
+        var html = EmailLayout.Render(
+            preheader: "pre", heading: "head", bodyHtml: "<p>body</p>",
+            buttonText: "Confirmar", buttonUrl: jaCodificado);
+
+        Assert.Contains(jaCodificado, html);
+        Assert.DoesNotContain("&amp;amp;", html);
+    }
+
+    [Fact]
     public void RenderCode_SubstituiPlaceholdersIncluindoOCodigo()
     {
         var html = EmailLayout.RenderCode(

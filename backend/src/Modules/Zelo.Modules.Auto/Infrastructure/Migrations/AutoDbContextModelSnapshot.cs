@@ -115,6 +115,10 @@ namespace Zelo.Modules.Auto.Infrastructure.Migrations
                     b.Property<int>("Category")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Color")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -128,8 +132,19 @@ namespace Zelo.Modules.Auto.Infrastructure.Migrations
                     b.Property<Guid?>("InspectionObligationId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateOnly?>("InsuranceRenewal")
+                    b.Property<DateOnly?>("InsurancePeriodEnd")
                         .HasColumnType("date");
+
+                    b.Property<DateOnly?>("InsurancePeriodStart")
+                        .HasColumnType("date");
+
+                    b.Property<string>("InsurancePolicyNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal?>("InsurancePremium")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
 
                     b.Property<string>("Insurer")
                         .HasMaxLength(200)

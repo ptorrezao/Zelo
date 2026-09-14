@@ -5,6 +5,8 @@ import { useRuntimeConfig, useCookie } from '#app'
 import { Box, Home, LogOut, Truck } from '@lucide/vue'
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../composables/useApiClient'
 import { useFeatureFlags } from '../composables/useFeatureFlags'
+import { useCurrentUser } from '../composables/useCurrentUser'
+import Avatar from '../components/ui/Avatar.vue'
 import SidebarProvider from '../components/ui/SidebarProvider.vue'
 import Sidebar from '../components/ui/Sidebar.vue'
 import SidebarRail from '../components/ui/SidebarRail.vue'
@@ -37,6 +39,8 @@ const breadcrumbs = computed(() => {
 })
 
 const { data: featureFlags } = useFeatureFlags()
+const { data: currentUser } = useCurrentUser()
+const currentUserLabel = computed(() => currentUser.value?.name || currentUser.value?.email || '')
 
 const navItems = computed(() => [
   { label: 'Início', path: '/', icon: Home, origin: zelo.shell, baseURL: '/' },
@@ -90,6 +94,12 @@ const handleLogout = () => {
 
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem v-if="currentUser">
+            <SidebarMenuButton :href="zelo.shell + '/profile'" :tooltip="currentUserLabel">
+              <Avatar :name="currentUserLabel" class="h-5 w-5 shrink-0 text-[10px]" />
+              <span class="truncate">{{ currentUserLabel }}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Logout" @click="handleLogout">
               <LogOut class="h-4 w-4" />

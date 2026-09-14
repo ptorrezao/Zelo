@@ -9,6 +9,19 @@ vi.mock('@zelo/ui/composables/useApiClient', () => ({
   useApiClient: () => client,
 }))
 
+const DEFAULT_HOUSEHOLD = { id: 'h1', name: 'Casa', role: 'Owner' }
+
+// resolveHouseholdId chama sempre /api/v1/households/me primeiro - os
+// testes so precisam de configurar o que interessa (/api/auto/vehicles,
+// etc.), esta funcao trata do resto por omissao.
+function mockGet(paths: Record<string, unknown>) {
+  client.GET.mockImplementation((path: string) => {
+    if (path === '/api/v1/households/me') return Promise.resolve({ data: [DEFAULT_HOUSEHOLD] })
+    if (path in paths) return Promise.resolve({ data: paths[path] })
+    return Promise.resolve({ data: [] })
+  })
+}
+
 function apiVehicle(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: 'v1',
@@ -17,13 +30,17 @@ function apiVehicle(overrides: Partial<Record<string, unknown>> = {}) {
     model: 'Corolla',
     plate: 'AA-00-BB',
     vin: 'VIN123',
+    color: null,
     status: 'Ativo',
     driver: null,
     odometer: 12000,
     registered: '2020-01-01',
     nextInspection: null,
     insurer: null,
-    insuranceRenewal: null,
+    insurancePolicyNumber: null,
+    insurancePeriodStart: null,
+    insurancePeriodEnd: null,
+    insurancePremium: null,
     iucDueDate: null,
     ...overrides,
   }
@@ -35,14 +52,12 @@ describe('useVehicles', () => {
     client.GET.mockReset()
     client.POST.mockReset()
     client.PUT.mockReset()
-    client.GET.mockResolvedValue({ data: [] })
+    mockGet({})
   })
 
   it('carrega veiculos e agrupa por categoria', async () => {
-    client.GET.mockImplementation((path: string) => {
-      if (path === '/api/auto/vehicles')
-        return Promise.resolve({ data: [apiVehicle({ id: 'v1', category: 'Ligeiros' }), apiVehicle({ id: 'v2', category: 'Motociclos', brand: 'Honda' })] })
-      return Promise.resolve({ data: [] })
+    mockGet({
+      '/api/auto/vehicles': [apiVehicle({ id: 'v1', category: 'Ligeiros' }), apiVehicle({ id: 'v2', category: 'Motociclos', brand: 'Honda' })],
     })
 
     const { useVehicles } = await import('./useVehicles')
@@ -53,11 +68,7 @@ describe('useVehicles', () => {
   })
 
   it('seleciona automaticamente o primeiro veiculo carregado', async () => {
-    client.GET.mockImplementation((path: string) => {
-      if (path === '/api/auto/vehicles')
-        return Promise.resolve({ data: [apiVehicle({ id: 'v1' })] })
-      return Promise.resolve({ data: [] })
-    })
+    mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
 
     const { useVehicles } = await import('./useVehicles')
     const { selectedId, isLoaded } = useVehicles()
@@ -67,10 +78,8 @@ describe('useVehicles', () => {
   })
 
   it('visibleGroups filtra por nome ou matricula', async () => {
-    client.GET.mockImplementation((path: string) => {
-      if (path === '/api/auto/vehicles')
-        return Promise.resolve({ data: [apiVehicle({ id: 'v1', brand: 'Toyota', plate: 'AA-00-BB' }), apiVehicle({ id: 'v2', brand: 'Honda', plate: 'CC-11-DD' })] })
-      return Promise.resolve({ data: [] })
+    mockGet({
+      '/api/auto/vehicles': [apiVehicle({ id: 'v1', brand: 'Toyota', plate: 'AA-00-BB' }), apiVehicle({ id: 'v2', brand: 'Honda', plate: 'CC-11-DD' })],
     })
 
     const { useVehicles } = await import('./useVehicles')
@@ -91,8 +100,9 @@ describe('useVehicles', () => {
     await vi.waitFor(() => expect(isLoaded.value).toBe(true))
 
     const created = await addVehicle({
-      category: 'Motociclos', brand: 'BMW', model: 'F800', plate: 'EE-22-FF', vin: 'VIN',
-      odometer: '0 km', registered: '01/01/2026', nextInspection: '', insurer: '', insuranceRenewal: '', iucDueDate: '',
+      category: 'Motociclos', brand: 'BMW', model: 'F800', plate: 'EE-22-FF', vin: 'VIN', color: 'Preto',
+      odometer: '0 km', registered: '01/01/2026', nextInspection: '', insurer: '',
+      insurancePolicyNumber: '', insurancePeriodStart: '', insurancePeriodEnd: '', insurancePremium: '', iucDueDate: '',
     })
 
     expect(created.brand).toBe('BMW')
@@ -101,11 +111,7 @@ describe('useVehicles', () => {
   })
 
   it('addMaintenance adiciona a manutencao ao veiculo', async () => {
-    client.GET.mockImplementation((path: string) => {
-      if (path === '/api/auto/vehicles')
-        return Promise.resolve({ data: [apiVehicle({ id: 'v1' })] })
-      return Promise.resolve({ data: [] })
-    })
+    mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
     client.POST.mockResolvedValue({
       data: {
         id: 'm1', vehicleId: 'v1', date: '2026-01-01', odometer: 12500, workshop: 'Oficina X',
@@ -126,11 +132,7 @@ describe('useVehicles', () => {
   })
 
   it('addDocument adiciona o documento ao veiculo', async () => {
-    client.GET.mockImplementation((path: string) => {
-      if (path === '/api/auto/vehicles')
-        return Promise.resolve({ data: [apiVehicle({ id: 'v1' })] })
-      return Promise.resolve({ data: [] })
-    })
+    mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
 
     const { useVehicles } = await import('./useVehicles')
     const { addDocument, allVehicles, isLoaded } = useVehicles()

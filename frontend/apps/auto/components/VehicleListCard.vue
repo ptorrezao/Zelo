@@ -5,12 +5,15 @@ import Card from '@zelo/ui/components/ui/Card.vue'
 import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
 import CardTitle from '@zelo/ui/components/ui/CardTitle.vue'
 import CardContent from '@zelo/ui/components/ui/CardContent.vue'
+import Select from '@zelo/ui/components/ui/Select.vue'
 import AddVehicleSheet from './AddVehicleSheet.vue'
+import ImportVehiclesSheet from './ImportVehiclesSheet.vue'
 import { useVehicles } from '../composables/useVehicles'
 
-const { visibleGroups, selectedId, fullName, logoFor } = useVehicles()
+const { visibleGroups, selectedId, fullName, logoFor, myHouseholds, selectedHouseholdId, setHousehold } = useVehicles()
 
 const isAddVehicleOpen = ref(false)
+const isImportVehiclesOpen = ref(false)
 
 // Todos os grupos comecam abertos; cada um pode ser fechado individualmente.
 const openGroups = reactive<Record<string, boolean>>({})
@@ -30,6 +33,13 @@ const markLogoError = (vehicleId: string) => {
   <Card class="h-fit lg:sticky ">
     <CardHeader>
       <CardTitle>Veículos</CardTitle>
+      <Select
+        v-if="myHouseholds.length > 1"
+        class="mt-2"
+        :model-value="selectedHouseholdId"
+        :options="myHouseholds.map(h => ({ value: h.id, label: h.name }))"
+        @update:model-value="setHousehold"
+      />
     </CardHeader>
     <CardContent class="flex max-h-[60vh] flex-col gap-4 overflow-y-auto">
       <div v-for="group in visibleGroups" :key="group.label">
@@ -82,10 +92,12 @@ const markLogoError = (vehicleId: string) => {
         </div>
       </div>
     </CardContent>
-    <div class="border-t border-border p-4">
+    <div class="flex flex-col gap-2 border-t border-border p-4">
       <Button class="w-full" variant="outline" @click="isAddVehicleOpen = true">+ Adicionar veículo</Button>
+      <Button class="w-full" variant="outline" @click="isImportVehiclesOpen = true">Importar veículos</Button>
     </div>
   </Card>
 
   <AddVehicleSheet v-model:open="isAddVehicleOpen" />
+  <ImportVehiclesSheet v-model:open="isImportVehiclesOpen" />
 </template>

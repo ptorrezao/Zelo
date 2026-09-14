@@ -3,6 +3,11 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Catalogo de marcas/modelos servido ao frontend via
+         GET /api/auto/vehicle-catalog - ver VehicleCatalogLoader.cs. -->
+    <EmbeddedResource Include="Infrastructure\VehicleCatalog\vehicle-catalog.json" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\Zelo.SharedKernel\Zelo.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Zelo.Contracts\Zelo.Contracts.csproj" />
     <ProjectReference Include="..\..\Zelo.Messaging\Zelo.Messaging.csproj" />

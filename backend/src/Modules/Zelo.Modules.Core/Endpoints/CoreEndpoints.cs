@@ -1,19 +1,21 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Zelo.ServiceDefaults;
 
 namespace Zelo.Modules.Core.Endpoints;
 
 public static class CoreEndpoints
 {
-    // NOTA: householdId vem por query param porque a autenticacao ainda
-    // nao esta ligada aos outros modulos (ver IdentityModule) - passar a
-    // vir de um claim do utilizador autenticado assim que essa integracao
-    // existir.
+    // householdId vem por query param, como em todo o resto da app -
+    // RequireHouseholdMembership confirma que o utilizador autenticado
+    // pertence de facto a esse household antes do handler correr.
     public static IEndpointRouteBuilder MapCoreEndpoints(this IEndpointRouteBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        var group = app.MapGroup("/api/core").RequireAuthorization();
+        var group = app.MapGroup("/api/core")
+            .RequireAuthorization()
+            .RequireHouseholdMembership();
 
         group.MapGet("/assets", CoreEndpointHandlers.GetAssets);
         group.MapGet("/obligations", CoreEndpointHandlers.GetObligations);

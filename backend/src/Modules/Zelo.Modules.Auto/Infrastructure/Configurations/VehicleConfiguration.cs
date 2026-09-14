@@ -14,6 +14,7 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.Property(v => v.Model).HasMaxLength(100).IsRequired();
         builder.Property(v => v.Plate).HasMaxLength(20).IsRequired();
         builder.Property(v => v.Vin).HasMaxLength(50).IsRequired();
+        builder.Property(v => v.Color).HasMaxLength(30);
         builder.Property(v => v.Driver).HasMaxLength(200);
         builder.Property(v => v.Insurer).HasMaxLength(200);
         builder.HasIndex(v => new { v.HouseholdId, v.Plate }).IsUnique();

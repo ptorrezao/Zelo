@@ -8,9 +8,10 @@ import SheetFooter from '@zelo/ui/components/ui/SheetFooter.vue'
 import Button from '@zelo/ui/components/ui/Button.vue'
 import Input from '@zelo/ui/components/ui/Input.vue'
 import Select from '@zelo/ui/components/ui/Select.vue'
+import Combobox from '@zelo/ui/components/ui/Combobox.vue'
 import DatePicker from '@zelo/ui/components/ui/DatePicker.vue'
 import { useVehicles } from '../composables/useVehicles'
-import { VEHICLE_BRANDS, VEHICLE_CATALOG } from '../data/vehicleCatalog'
+import { useVehicleCatalog } from '../composables/useVehicleCatalog'
 
 // Quando vehicleId e passado, o sheet abre em modo de edicao: os campos
 // vem pre-preenchidos com os dados desse veiculo e o submit atualiza-o
@@ -20,6 +21,7 @@ const props = defineProps<{ vehicleId?: string }>()
 const open = defineModel<boolean>('open', { default: false })
 
 const { allVehicles, addVehicle, updateVehicle, categoryOf, selectedId } = useVehicles()
+const { catalog } = useVehicleCatalog()
 
 const isEditMode = computed(() => !!props.vehicleId)
 
@@ -28,6 +30,7 @@ const brand = ref('')
 const model = ref('')
 const plate = ref('')
 const vin = ref('')
+const color = ref('')
 const odometer = ref('')
 const registered = ref('')
 const nextInspection = ref('')
@@ -39,15 +42,18 @@ const categoryOptions = [
   { value: 'Ligeiros', label: 'Ligeiro' },
   { value: 'Motociclos', label: 'Motociclo' },
 ]
-const brandOptions = computed(() => VEHICLE_BRANDS.map(b => ({ value: b, label: b })))
-const modelOptions = computed(() => (VEHICLE_CATALOG[brand.value] ?? []).map(m => ({ value: m, label: m })))
 
-// Trocar de marca limpa o modelo se ja nao fizer parte do catalogo dela.
-watch(brand, () => {
-  if (!VEHICLE_CATALOG[brand.value]?.includes(model.value)) {
-    model.value = ''
-  }
-})
+// Marca/Modelo/Cor sao texto livre com sugestoes (datalist), nao uma
+// lista fechada - o catalogo (vindo do backend, ver useVehicleCatalog)
+// nunca vai ter todas as marcas e modelos possiveis, e antes bloqueava o
+// utilizador se a dele nao estivesse listada. Servem so para sugerir, o
+// valor final pode ser qualquer texto.
+const brandSuggestions = computed(() => Object.keys(catalog.value))
+const modelSuggestions = computed(() => catalog.value[brand.value] ?? [])
+const COLOR_SUGGESTIONS = [
+  'Branco', 'Preto', 'Cinzento', 'Prata', 'Azul', 'Vermelho',
+  'Verde', 'Amarelo', 'Castanho', 'Bege', 'Laranja', 'Roxo',
+]
 
 function reset() {
   category.value = 'Ligeiros'
@@ -55,6 +61,7 @@ function reset() {
   model.value = ''
   plate.value = ''
   vin.value = ''
+  color.value = ''
   odometer.value = ''
   registered.value = ''
   nextInspection.value = ''
@@ -71,6 +78,7 @@ function loadFromVehicle(vehicleId: string) {
   model.value = vehicle.model
   plate.value = vehicle.plate
   vin.value = vehicle.vin === '—' ? '' : vehicle.vin
+  color.value = vehicle.color === '—' ? '' : vehicle.color
   odometer.value = vehicle.odometer
   registered.value = vehicle.registered === '—' ? '' : vehicle.registered
   nextInspection.value = vehicle.nextInspection === '—' ? '' : vehicle.nextInspection
@@ -101,6 +109,7 @@ async function handleSubmit() {
     model: model.value,
     plate: plate.value,
     vin: vin.value,
+    color: color.value,
     odometer: odometer.value,
     registered: registered.value,
     nextInspection: nextInspection.value,
@@ -142,12 +151,12 @@ async function handleSubmit() {
 
         <div class="grid grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium">Marca</label>
-            <Select v-model="brand" :options="brandOptions" placeholder="Marca" />
+            <label for="brand" class="text-sm font-medium">Marca</label>
+            <Combobox id="brand" v-model="brand" :options="brandSuggestions" placeholder="Marca" />
           </div>
           <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium">Modelo</label>
-            <Select v-model="model" :options="modelOptions" placeholder="Modelo" :disabled="!brand" />
+            <label for="model" class="text-sm font-medium">Modelo</label>
+            <Combobox id="model" v-model="model" :options="modelSuggestions" placeholder="Modelo" />
           </div>
         </div>
 
@@ -156,9 +165,15 @@ async function handleSubmit() {
           <Input id="plate" v-model="plate" placeholder="Ex.: AA-00-AA" required />
         </div>
 
-        <div class="flex flex-col gap-2">
-          <label for="vin" class="text-sm font-medium">VIN</label>
-          <Input id="vin" v-model="vin" placeholder="Número de chassis" />
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-2">
+            <label for="vin" class="text-sm font-medium">VIN</label>
+            <Input id="vin" v-model="vin" placeholder="Número de chassis" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label for="color" class="text-sm font-medium">Cor</label>
+            <Combobox id="color" v-model="color" :options="COLOR_SUGGESTIONS" placeholder="Cor" />
+          </div>
         </div>
 
         <div class="flex flex-col gap-2">

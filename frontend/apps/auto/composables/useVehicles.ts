@@ -11,6 +11,7 @@ export interface VehicleFormInput {
   model: string
   plate: string
   vin: string
+  color: string
   odometer: string
   registered: string
   nextInspection: string
@@ -18,11 +19,6 @@ export interface VehicleFormInput {
   insuranceRenewal: string
   iucDueDate: string
 }
-
-// TODO: nao ha ainda forma de um utilizador saber o seu proprio household
-// (nenhum endpoint em Identity expoe isto, e o registo nao cria um
-// Household). Fixo por agora - trocar assim que essa peca existir.
-const DEFAULT_HOUSEHOLD_ID = '11111111-1111-1111-1111-111111111111'
 
 type ApiVehicle = components['schemas']['VehicleResponse']
 type ApiMaintenance = components['schemas']['MaintenanceResponse']
@@ -44,6 +40,7 @@ function mapVehicleFromApi(dto: ApiVehicle): Vehicle {
     plate: dto.plate,
     status: dto.status,
     vin: dto.vin || '—',
+    color: dto.color || '—',
     registered: fromIso(dto.registered),
     nextInspection: fromIso(dto.nextInspection),
     insurer: dto.insurer || '—',
@@ -94,8 +91,33 @@ const selectedId = ref('')
 const isLoaded = ref(false)
 let loadPromise: Promise<void> | null = null
 
+// Os households do utilizador atual - ja nao ha um ID fixo para toda a
+// app (GET /api/v1/households/me garante que existe sempre pelo menos
+// um, criando-o na primeira chamada se for preciso). Por omissao usa-se
+// o primeiro; selectedHouseholdId muda quando o utilizador troca no
+// seletor (ver setHousehold), o que forca um refresh.
+type HouseholdOption = components['schemas']['HouseholdResponse']
+const myHouseholds = ref<HouseholdOption[]>([])
+const selectedHouseholdId = ref('')
+let householdsPromise: Promise<void> | null = null
+
+async function resolveHouseholdId(client: ReturnType<typeof useApiClient>): Promise<string> {
+  if (!householdsPromise) {
+    householdsPromise = client.GET('/api/v1/households/me').then(({ data }) => {
+      myHouseholds.value = data ?? []
+      if (!selectedHouseholdId.value) {
+        selectedHouseholdId.value = myHouseholds.value[0]?.id ?? ''
+      }
+    })
+  }
+  await householdsPromise
+  if (!selectedHouseholdId.value) throw new Error('Não foi possível determinar o household do utilizador.')
+  return selectedHouseholdId.value
+}
+
 async function loadVehicles(client: ReturnType<typeof useApiClient>) {
-  const { data } = await client.GET('/api/auto/vehicles', { params: { query: { householdId: DEFAULT_HOUSEHOLD_ID } } })
+  const householdId = await resolveHouseholdId(client)
+  const { data } = await client.GET('/api/auto/vehicles', { params: { query: { householdId } } })
   const vehicles = (data ?? []).map(mapVehicleFromApi)
 
   groups.value = [
@@ -129,6 +151,22 @@ export function useVehicles() {
 
   if (!loadPromise) {
     loadPromise = loadVehicles(client)
+  }
+
+  // Forca um novo pedido a API, ignorando o cache do loadPromise - usado
+  // depois de uma importacao de veiculos, que nao passa por addVehicle().
+  function refresh() {
+    loadPromise = loadVehicles(client)
+    return loadPromise
+  }
+
+  // Troca o household ativo (quando o utilizador tem mais que um) e
+  // recarrega a lista de veiculos para esse household.
+  function setHousehold(householdId: string) {
+    if (householdId === selectedHouseholdId.value) return
+    selectedHouseholdId.value = householdId
+    selectedId.value = '' // o veiculo selecionado era doutro household
+    void refresh()
   }
 
   const allVehicles = computed(() => groups.value.flatMap(group => group.items))
@@ -172,14 +210,16 @@ export function useVehicles() {
   }
 
   async function addVehicle(input: VehicleFormInput): Promise<Vehicle> {
+    const householdId = await resolveHouseholdId(client)
     const { data } = await client.POST('/api/auto/vehicles', {
-      params: { query: { householdId: DEFAULT_HOUSEHOLD_ID } },
+      params: { query: { householdId } },
       body: {
         category: input.category,
         brand: input.brand,
         model: input.model,
         plate: input.plate,
         vin: input.vin,
+        color: input.color || null,
         driver: null,
         odometer: parseKmValue(input.odometer),
         registered: toIso(input.registered) ?? new Date().toISOString().slice(0, 10),
@@ -205,6 +245,7 @@ export function useVehicles() {
         model: input.model,
         plate: input.plate,
         vin: input.vin,
+        color: input.color || null,
         driver: null,
         odometer: parseKmValue(input.odometer),
         registered: toIso(input.registered) ?? new Date().toISOString().slice(0, 10),
@@ -270,6 +311,10 @@ export function useVehicles() {
     query,
     selectedId,
     isLoaded,
+    refresh,
+    myHouseholds,
+    selectedHouseholdId,
+    setHousehold,
     allVehicles,
     selected,
     photo,

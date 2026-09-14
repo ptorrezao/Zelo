@@ -33,6 +33,7 @@ internal static class AutoEndpointHandlers
             Model = request.Model,
             Plate = request.Plate,
             Vin = request.Vin,
+            Color = request.Color,
             Driver = request.Driver,
             Odometer = request.Odometer,
             Registered = request.Registered,
@@ -71,6 +72,7 @@ internal static class AutoEndpointHandlers
         vehicle.Model = request.Model;
         vehicle.Plate = request.Plate;
         vehicle.Vin = request.Vin;
+        vehicle.Color = request.Color;
         vehicle.Driver = request.Driver;
         vehicle.Odometer = request.Odometer;
         vehicle.Registered = request.Registered;

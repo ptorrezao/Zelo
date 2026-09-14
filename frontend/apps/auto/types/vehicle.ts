@@ -47,6 +47,7 @@ export interface Vehicle {
   plate: string
   status: string
   vin: string
+  color: string
   registered: string
   nextInspection: string
   insurer: string

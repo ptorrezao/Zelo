@@ -1125,6 +1125,7 @@ export interface components {
             model: string;
             plate: string;
             vin: string;
+            color: null | string;
             status: components["schemas"]["VehicleStatus"];
             driver: null | string;
             /** Format: int32 */
@@ -1147,6 +1148,7 @@ export interface components {
             model: string;
             plate: string;
             vin: string;
+            color: null | string;
             driver: null | string;
             /** Format: int32 */
             odometer: number | string;

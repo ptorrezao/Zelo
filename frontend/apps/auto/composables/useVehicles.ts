@@ -11,6 +11,7 @@ export interface VehicleFormInput {
   model: string
   plate: string
   vin: string
+  color: string
   odometer: string
   registered: string
   nextInspection: string
@@ -44,6 +45,7 @@ function mapVehicleFromApi(dto: ApiVehicle): Vehicle {
     plate: dto.plate,
     status: dto.status,
     vin: dto.vin || '—',
+    color: dto.color || '—',
     registered: fromIso(dto.registered),
     nextInspection: fromIso(dto.nextInspection),
     insurer: dto.insurer || '—',
@@ -180,6 +182,7 @@ export function useVehicles() {
         model: input.model,
         plate: input.plate,
         vin: input.vin,
+        color: input.color || null,
         driver: null,
         odometer: parseKmValue(input.odometer),
         registered: toIso(input.registered) ?? new Date().toISOString().slice(0, 10),
@@ -205,6 +208,7 @@ export function useVehicles() {
         model: input.model,
         plate: input.plate,
         vin: input.vin,
+        color: input.color || null,
         driver: null,
         odometer: parseKmValue(input.odometer),
         registered: toIso(input.registered) ?? new Date().toISOString().slice(0, 10),

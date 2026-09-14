@@ -8,6 +8,7 @@ internal sealed record VehicleUpsertRequest(
     string Model,
     string Plate,
     string Vin,
+    string? Color,
     string? Driver,
     int Odometer,
     DateOnly Registered,
@@ -23,6 +24,7 @@ internal sealed record VehicleResponse(
     string Model,
     string Plate,
     string Vin,
+    string? Color,
     VehicleStatus Status,
     string? Driver,
     int Odometer,
@@ -33,7 +35,7 @@ internal sealed record VehicleResponse(
     DateOnly? IucDueDate)
 {
     public static VehicleResponse From(Vehicle v) => new(
-        v.Id, v.Category, v.Brand, v.Model, v.Plate, v.Vin, v.Status, v.Driver,
+        v.Id, v.Category, v.Brand, v.Model, v.Plate, v.Vin, v.Color, v.Status, v.Driver,
         v.Odometer, v.Registered, v.NextInspection, v.Insurer, v.InsuranceRenewal, v.IucDueDate);
 }
 

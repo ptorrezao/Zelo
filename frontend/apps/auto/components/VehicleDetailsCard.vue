@@ -35,6 +35,10 @@ const { selected, photo, fullName } = useVehicles()
           <span class="text-sm font-medium">{{ selected?.vin }}</span>
         </div>
         <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase text-muted-foreground">Cor</span>
+          <span class="text-sm font-medium">{{ selected?.color }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
           <span class="text-xs font-semibold uppercase text-muted-foreground">Data de matrícula</span>
           <span class="text-sm font-medium">{{ selected?.registered }}</span>
         </div>

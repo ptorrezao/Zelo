@@ -1135,8 +1135,12 @@ export interface components {
             /** Format: date */
             nextInspection: null | string;
             insurer: null | string;
+            insurancePolicyNumber: null | string;
             /** Format: date */
-            insuranceRenewal: null | string;
+            insurancePeriodStart: null | string;
+            /** Format: date */
+            insurancePeriodEnd: null | string;
+            insurancePremium: null | number | string;
             /** Format: date */
             iucDueDate: null | string;
         };
@@ -1157,8 +1161,12 @@ export interface components {
             /** Format: date */
             nextInspection: null | string;
             insurer: null | string;
+            insurancePolicyNumber: null | string;
             /** Format: date */
-            insuranceRenewal: null | string;
+            insurancePeriodStart: null | string;
+            /** Format: date */
+            insurancePeriodEnd: null | string;
+            insurancePremium: null | number | string;
             /** Format: date */
             iucDueDate: null | string;
         };

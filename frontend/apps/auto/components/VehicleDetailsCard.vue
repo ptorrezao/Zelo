@@ -51,8 +51,16 @@ const { selected, photo, fullName } = useVehicles()
           <span class="text-sm font-medium">{{ selected?.insurer }}</span>
         </div>
         <div class="flex flex-col gap-1">
-          <span class="text-xs font-semibold uppercase text-muted-foreground">Renovação do seguro</span>
-          <span class="text-sm font-medium">{{ selected?.insuranceRenewal }}</span>
+          <span class="text-xs font-semibold uppercase text-muted-foreground">Nº da apólice</span>
+          <span class="text-sm font-medium">{{ selected?.insurancePolicyNumber }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase text-muted-foreground">Período do seguro</span>
+          <span class="text-sm font-medium">{{ selected?.insurancePeriodStart }} – {{ selected?.insurancePeriodEnd }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase text-muted-foreground">Valor do prémio</span>
+          <span class="text-sm font-medium">{{ selected?.insurancePremium }}</span>
         </div>
         <div class="flex flex-col gap-1">
           <span class="text-xs font-semibold uppercase text-muted-foreground">Próxima inspeção</span>

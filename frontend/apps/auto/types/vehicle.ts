@@ -51,7 +51,10 @@ export interface Vehicle {
   registered: string
   nextInspection: string
   insurer: string
-  insuranceRenewal: string
+  insurancePolicyNumber: string
+  insurancePeriodStart: string
+  insurancePeriodEnd: string
+  insurancePremium: string
   iucDueDate: string
   odometer: string
   maintenances: Maintenance[]

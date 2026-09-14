@@ -24,7 +24,10 @@ function apiVehicle(overrides: Partial<Record<string, unknown>> = {}) {
     registered: '2020-01-01',
     nextInspection: null,
     insurer: null,
-    insuranceRenewal: null,
+    insurancePolicyNumber: null,
+    insurancePeriodStart: null,
+    insurancePeriodEnd: null,
+    insurancePremium: null,
     iucDueDate: null,
     ...overrides,
   }
@@ -93,7 +96,8 @@ describe('useVehicles', () => {
 
     const created = await addVehicle({
       category: 'Motociclos', brand: 'BMW', model: 'F800', plate: 'EE-22-FF', vin: 'VIN', color: 'Preto',
-      odometer: '0 km', registered: '01/01/2026', nextInspection: '', insurer: '', insuranceRenewal: '', iucDueDate: '',
+      odometer: '0 km', registered: '01/01/2026', nextInspection: '', insurer: '',
+      insurancePolicyNumber: '', insurancePeriodStart: '', insurancePeriodEnd: '', insurancePremium: '', iucDueDate: '',
     })
 
     expect(created.brand).toBe('BMW')

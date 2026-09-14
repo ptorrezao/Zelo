@@ -14,7 +14,10 @@ internal sealed record VehicleUpsertRequest(
     DateOnly Registered,
     DateOnly? NextInspection,
     string? Insurer,
-    DateOnly? InsuranceRenewal,
+    string? InsurancePolicyNumber,
+    DateOnly? InsurancePeriodStart,
+    DateOnly? InsurancePeriodEnd,
+    decimal? InsurancePremium,
     DateOnly? IucDueDate);
 
 internal sealed record VehicleResponse(
@@ -31,12 +34,16 @@ internal sealed record VehicleResponse(
     DateOnly Registered,
     DateOnly? NextInspection,
     string? Insurer,
-    DateOnly? InsuranceRenewal,
+    string? InsurancePolicyNumber,
+    DateOnly? InsurancePeriodStart,
+    DateOnly? InsurancePeriodEnd,
+    decimal? InsurancePremium,
     DateOnly? IucDueDate)
 {
     public static VehicleResponse From(Vehicle v) => new(
         v.Id, v.Category, v.Brand, v.Model, v.Plate, v.Vin, v.Color, v.Status, v.Driver,
-        v.Odometer, v.Registered, v.NextInspection, v.Insurer, v.InsuranceRenewal, v.IucDueDate);
+        v.Odometer, v.Registered, v.NextInspection, v.Insurer, v.InsurancePolicyNumber,
+        v.InsurancePeriodStart, v.InsurancePeriodEnd, v.InsurancePremium, v.IucDueDate);
 }
 
 internal sealed record MaintenanceItemRequest(string Description, decimal Price, string? SerialNumber);

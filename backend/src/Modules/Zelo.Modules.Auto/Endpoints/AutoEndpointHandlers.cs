@@ -39,7 +39,10 @@ internal static class AutoEndpointHandlers
             Registered = request.Registered,
             NextInspection = request.NextInspection,
             Insurer = request.Insurer,
-            InsuranceRenewal = request.InsuranceRenewal,
+            InsurancePolicyNumber = request.InsurancePolicyNumber,
+            InsurancePeriodStart = request.InsurancePeriodStart,
+            InsurancePeriodEnd = request.InsurancePeriodEnd,
+            InsurancePremium = request.InsurancePremium,
             IucDueDate = request.IucDueDate,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -78,7 +81,10 @@ internal static class AutoEndpointHandlers
         vehicle.Registered = request.Registered;
         vehicle.NextInspection = request.NextInspection;
         vehicle.Insurer = request.Insurer;
-        vehicle.InsuranceRenewal = request.InsuranceRenewal;
+        vehicle.InsurancePolicyNumber = request.InsurancePolicyNumber;
+        vehicle.InsurancePeriodStart = request.InsurancePeriodStart;
+        vehicle.InsurancePeriodEnd = request.InsurancePeriodEnd;
+        vehicle.InsurancePremium = request.InsurancePremium;
         vehicle.IucDueDate = request.IucDueDate;
 
         var obligationEvent = VehicleEvents.SyncInspectionObligation(vehicle);

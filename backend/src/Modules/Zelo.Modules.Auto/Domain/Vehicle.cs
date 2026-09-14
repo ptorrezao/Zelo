@@ -3,7 +3,7 @@ namespace Zelo.Modules.Auto.Domain;
 internal sealed class Vehicle
 {
     public Guid Id { get; init; }
-    public Guid HouseholdId { get; init; }
+    public Guid HouseholdId { get; set; }
     public required VehicleCategory Category { get; set; }
     public required string Brand { get; set; }
     public required string Model { get; set; }

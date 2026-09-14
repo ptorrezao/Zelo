@@ -6,7 +6,7 @@ namespace Zelo.Modules.Core.Domain;
 internal sealed class Asset
 {
     public Guid Id { get; init; }
-    public Guid HouseholdId { get; init; }
+    public Guid HouseholdId { get; set; }
     public required string Module { get; set; }
     public required string AssetType { get; set; }
     public required string Name { get; set; }

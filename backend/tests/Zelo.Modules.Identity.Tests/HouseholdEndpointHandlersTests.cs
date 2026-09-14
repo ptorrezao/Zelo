@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Zelo.Contracts;
 using Zelo.Modules.Identity.Domain;
 using Zelo.Modules.Identity.Endpoints;
 using Zelo.Modules.Identity.Infrastructure;
@@ -162,5 +163,83 @@ public class HouseholdEndpointHandlersTests
 
         var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
         Assert.Equal(400, statusResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteHousehold_Owner_RemoveEPublicaEventoComHouseholdPredefinidoComoDestino()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var defaultHousehold = new Household { Id = Guid.NewGuid(), Name = "A minha casa", CreatedAt = DateTimeOffset.UtcNow, IsDefault = true };
+        var extraHousehold = new Household { Id = Guid.NewGuid(), Name = "Casa de férias", CreatedAt = DateTimeOffset.UtcNow, IsDefault = false };
+        db.Households.AddRange(defaultHousehold, extraHousehold);
+        db.HouseholdMembers.AddRange(
+            new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = defaultHousehold.Id, UserId = userId, Role = HouseholdRole.Owner, JoinedAt = DateTimeOffset.UtcNow },
+            new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = extraHousehold.Id, UserId = userId, Role = HouseholdRole.Owner, JoinedAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
+        var events = new FakeEventPublisher();
+
+        var result = await HouseholdEndpointHandlers.DeleteHousehold(extraHousehold.Id, PrincipalFor(userId), db, events, CancellationToken.None);
+
+        Assert.IsType<NoContent>(result);
+        Assert.Null(await db.Households.FindAsync(extraHousehold.Id));
+        Assert.Equal(0, await db.HouseholdMembers.CountAsync(m => m.HouseholdId == extraHousehold.Id));
+        var published = Assert.Single(events.Published.OfType<HouseholdDeleted>());
+        Assert.Equal(extraHousehold.Id, published.HouseholdId);
+        Assert.Equal(defaultHousehold.Id, published.ReplacementHouseholdId);
+    }
+
+    [Fact]
+    public async Task DeleteHousehold_HouseholdPredefinido_DevolveBadRequestENaoRemove()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var household = new Household { Id = Guid.NewGuid(), Name = "A minha casa", CreatedAt = DateTimeOffset.UtcNow, IsDefault = true };
+        db.Households.Add(household);
+        db.HouseholdMembers.Add(new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = household.Id, UserId = userId, Role = HouseholdRole.Owner, JoinedAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
+        var events = new FakeEventPublisher();
+
+        var result = await HouseholdEndpointHandlers.DeleteHousehold(household.Id, PrincipalFor(userId), db, events, CancellationToken.None);
+
+        var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(400, statusResult.StatusCode);
+        Assert.NotNull(await db.Households.FindAsync(household.Id));
+        Assert.Empty(events.Published);
+    }
+
+    [Fact]
+    public async Task DeleteHousehold_Member_DevolveForbidden()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var defaultHousehold = new Household { Id = Guid.NewGuid(), Name = "A minha casa", CreatedAt = DateTimeOffset.UtcNow, IsDefault = true };
+        var household = new Household { Id = Guid.NewGuid(), Name = "Casa partilhada", CreatedAt = DateTimeOffset.UtcNow };
+        db.Households.AddRange(defaultHousehold, household);
+        db.HouseholdMembers.AddRange(
+            new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = defaultHousehold.Id, UserId = userId, Role = HouseholdRole.Owner, JoinedAt = DateTimeOffset.UtcNow },
+            new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = household.Id, UserId = userId, Role = HouseholdRole.Member, JoinedAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
+        var events = new FakeEventPublisher();
+
+        var result = await HouseholdEndpointHandlers.DeleteHousehold(household.Id, PrincipalFor(userId), db, events, CancellationToken.None);
+
+        Assert.IsType<ForbidHttpResult>(result);
+        Assert.NotNull(await db.Households.FindAsync(household.Id));
+    }
+
+    [Fact]
+    public async Task DeleteHousehold_UtilizadorNaoPertenceAoHousehold_DevolveNotFound()
+    {
+        await using var db = NewDb();
+        var household = new Household { Id = Guid.NewGuid(), Name = "Casa", CreatedAt = DateTimeOffset.UtcNow };
+        db.Households.Add(household);
+        db.HouseholdMembers.Add(new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = household.Id, UserId = Guid.NewGuid(), Role = HouseholdRole.Owner, JoinedAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
+        var events = new FakeEventPublisher();
+
+        var result = await HouseholdEndpointHandlers.DeleteHousehold(household.Id, PrincipalFor(Guid.NewGuid()), db, events, CancellationToken.None);
+
+        Assert.IsType<NotFound>(result);
     }
 }

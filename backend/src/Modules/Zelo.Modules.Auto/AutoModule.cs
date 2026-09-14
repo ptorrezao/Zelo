@@ -2,6 +2,9 @@ using System.Net.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Zelo.Contracts;
+using Zelo.Messaging;
+using Zelo.Modules.Auto.Consumers;
 using Zelo.Modules.Auto.Infrastructure;
 
 namespace Zelo.Modules.Auto;
@@ -36,7 +39,7 @@ public static class AutoModule
     /// Chamado APENAS pelo host Worker. Nunca pela Api.
     public static IServiceCollection AddAutoConsumers(this IServiceCollection services)
     {
-        // Auto ainda nao consome eventos de outros modulos.
+        services.AddZeloEventHandler<HouseholdDeleted, HouseholdDeletedHandler>("auto.householddeleted");
         return services;
     }
 

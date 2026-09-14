@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useHousehold } from '../composables/useHousehold'
+import { useCurrentUser } from '@zelo/ui/composables/useCurrentUser'
 import Avatar from '@zelo/ui/components/ui/Avatar.vue'
 import Button from '@zelo/ui/components/ui/Button.vue'
 import Card from '@zelo/ui/components/ui/Card.vue'
@@ -11,7 +12,32 @@ import CardContent from '@zelo/ui/components/ui/CardContent.vue'
 import Input from '@zelo/ui/components/ui/Input.vue'
 
 const { user } = useAuth()
-const { households, rename, create } = useHousehold()
+const { data: currentUser, updateName } = useCurrentUser()
+const { households, rename, create, remove } = useHousehold()
+
+const isEditingName = ref(false)
+const nameInput = ref('')
+const isSavingName = ref(false)
+const nameErrorMessage = ref('')
+
+function startEditingName() {
+  nameInput.value = currentUser.value?.name ?? ''
+  isEditingName.value = true
+  nameErrorMessage.value = ''
+}
+
+async function saveName() {
+  isSavingName.value = true
+  nameErrorMessage.value = ''
+  try {
+    await updateName(nameInput.value)
+    isEditingName.value = false
+  } catch (err) {
+    nameErrorMessage.value = err instanceof Error ? err.message : 'Não foi possível guardar o nome.'
+  } finally {
+    isSavingName.value = false
+  }
+}
 
 // Nomes em edição, indexados por household id - só entra em modo de
 // edição quando o utilizador clica em "Mudar nome" naquele household.
@@ -57,12 +83,34 @@ async function addHousehold() {
     isSaving.value = false
   }
 }
+
+// Confirmacao inline (sem modal na app) - clicar em "Remover" mostra
+// "tem a certeza?" no lugar dos botoes normais, so para aquele household.
+const removingId = ref<string | null>(null)
+
+function startRemoving(householdId: string) {
+  removingId.value = householdId
+  errorMessage.value = ''
+}
+
+async function confirmRemove(householdId: string) {
+  isSaving.value = true
+  errorMessage.value = ''
+  try {
+    await remove(householdId)
+    removingId.value = null
+  } catch (err) {
+    errorMessage.value = err instanceof Error ? err.message : 'Não foi possível remover o household.'
+  } finally {
+    isSaving.value = false
+  }
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
     <div class="flex items-center gap-4 rounded-lg border border-border bg-card p-6 shadow-sm">
-      <Avatar :name="user?.email?.substring(0, 1).toUpperCase() || 'U'" class="h-12 w-12 text-base" />
+      <Avatar :name="currentUser?.name || user?.email?.substring(0, 1).toUpperCase() || 'U'" class="h-12 w-12 text-base" />
       <div>
         <h1 class="text-xl font-semibold">Definições de Conta</h1>
         <p class="text-sm text-muted-foreground">Gerencie sua informação de perfil</p>
@@ -75,6 +123,23 @@ async function addHousehold() {
           <CardTitle>Informações da Conta</CardTitle>
         </CardHeader>
         <CardContent class="flex flex-col gap-6">
+          <div class="flex flex-col gap-1">
+            <span class="text-xs font-semibold uppercase text-muted-foreground">Nome</span>
+            <p v-if="nameErrorMessage" class="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              {{ nameErrorMessage }}
+            </p>
+            <template v-if="isEditingName">
+              <Input v-model="nameInput" placeholder="O seu nome" />
+              <div class="flex gap-2">
+                <Button size="sm" :disabled="isSavingName" @click="saveName">Guardar</Button>
+                <Button size="sm" variant="outline" :disabled="isSavingName" @click="isEditingName = false">Cancelar</Button>
+              </div>
+            </template>
+            <div v-else class="flex items-center justify-between">
+              <span class="text-sm font-medium">{{ currentUser?.name || 'Não definido' }}</span>
+              <Button size="sm" variant="outline" @click="startEditingName">Editar</Button>
+            </div>
+          </div>
           <div class="flex flex-col gap-1">
             <span class="text-xs font-semibold uppercase text-muted-foreground">Email</span>
             <span class="text-sm font-medium">{{ user?.email || 'Não definido' }}</span>
@@ -130,15 +195,30 @@ async function addHousehold() {
                 <Button size="sm" variant="outline" :disabled="isSaving" @click="editingId = null">Cancelar</Button>
               </div>
             </template>
+            <template v-else-if="removingId === household.id">
+              <p class="text-sm">Remover "{{ household.name }}"? Os veículos, ativos e obrigações passam para o household predefinido.</p>
+              <div class="flex gap-2">
+                <Button size="sm" variant="outline" :disabled="isSaving" @click="confirmRemove(household.id)">Sim, remover</Button>
+                <Button size="sm" variant="outline" :disabled="isSaving" @click="removingId = null">Cancelar</Button>
+              </div>
+            </template>
             <template v-else>
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-sm font-medium">{{ household.name }}</p>
+                  <p class="text-sm font-medium">
+                    {{ household.name }}
+                    <span v-if="household.isDefault" class="ml-1 text-xs font-normal text-muted-foreground">(predefinido)</span>
+                  </p>
                   <p class="text-xs text-muted-foreground">{{ household.role === 'Owner' ? 'Dono' : 'Membro' }}</p>
                 </div>
-                <Button v-if="household.role === 'Owner'" size="sm" variant="outline" @click="startEditing(household.id, household.name)">
-                  Mudar nome
-                </Button>
+                <div v-if="household.role === 'Owner'" class="flex gap-2">
+                  <Button size="sm" variant="outline" @click="startEditing(household.id, household.name)">
+                    Mudar nome
+                  </Button>
+                  <Button v-if="!household.isDefault" size="sm" variant="outline" @click="startRemoving(household.id)">
+                    Remover
+                  </Button>
+                </div>
               </div>
             </template>
           </div>

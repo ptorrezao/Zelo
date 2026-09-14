@@ -9,7 +9,7 @@ namespace Zelo.Modules.Core.Domain;
 internal sealed class Obligation
 {
     public Guid Id { get; init; }
-    public Guid HouseholdId { get; init; }
+    public Guid HouseholdId { get; set; }
     public Guid AssetId { get; init; }
     public required string Module { get; set; }
     public required string Title { get; set; }

@@ -41,5 +41,15 @@ export function useHousehold() {
     return data
   }
 
-  return { households, isLoaded, load, rename, create }
+  async function remove(householdId: string): Promise<void> {
+    const { error } = await client.DELETE('/api/v1/households/{id}', {
+      params: { path: { id: householdId } },
+    })
+    if (error) {
+      throw new Error(error?.error ?? 'Não foi possível remover o household.')
+    }
+    households.value = households.value.filter(h => h.id !== householdId)
+  }
+
+  return { households, isLoaded, load, rename, create, remove }
 }

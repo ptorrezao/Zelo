@@ -9,13 +9,17 @@ internal sealed class Vehicle
     public required string Model { get; set; }
     public required string Plate { get; set; }
     public required string Vin { get; set; }
+    public string? Color { get; set; }
     public VehicleStatus Status { get; set; } = VehicleStatus.Ativo;
     public string? Driver { get; set; }
     public int Odometer { get; set; }
     public DateOnly Registered { get; set; }
     public DateOnly? NextInspection { get; set; }
     public string? Insurer { get; set; }
-    public DateOnly? InsuranceRenewal { get; set; }
+    public string? InsurancePolicyNumber { get; set; }
+    public DateOnly? InsurancePeriodStart { get; set; }
+    public DateOnly? InsurancePeriodEnd { get; set; }
+    public decimal? InsurancePremium { get; set; }
     public DateOnly? IucDueDate { get; set; }
     public DateTimeOffset CreatedAt { get; init; }
 

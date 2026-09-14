@@ -28,11 +28,15 @@ const brand = ref('')
 const model = ref('')
 const plate = ref('')
 const vin = ref('')
+const color = ref('')
 const odometer = ref('')
 const registered = ref('')
 const nextInspection = ref('')
 const insurer = ref('')
-const insuranceRenewal = ref('')
+const insurancePolicyNumber = ref('')
+const insurancePeriodStart = ref('')
+const insurancePeriodEnd = ref('')
+const insurancePremium = ref('')
 const iucDueDate = ref('')
 
 const categoryOptions = [
@@ -55,11 +59,15 @@ function reset() {
   model.value = ''
   plate.value = ''
   vin.value = ''
+  color.value = ''
   odometer.value = ''
   registered.value = ''
   nextInspection.value = ''
   insurer.value = ''
-  insuranceRenewal.value = ''
+  insurancePolicyNumber.value = ''
+  insurancePeriodStart.value = ''
+  insurancePeriodEnd.value = ''
+  insurancePremium.value = ''
   iucDueDate.value = ''
 }
 
@@ -71,11 +79,15 @@ function loadFromVehicle(vehicleId: string) {
   model.value = vehicle.model
   plate.value = vehicle.plate
   vin.value = vehicle.vin === '—' ? '' : vehicle.vin
+  color.value = vehicle.color === '—' ? '' : vehicle.color
   odometer.value = vehicle.odometer
   registered.value = vehicle.registered === '—' ? '' : vehicle.registered
   nextInspection.value = vehicle.nextInspection === '—' ? '' : vehicle.nextInspection
   insurer.value = vehicle.insurer === '—' ? '' : vehicle.insurer
-  insuranceRenewal.value = vehicle.insuranceRenewal === '—' ? '' : vehicle.insuranceRenewal
+  insurancePolicyNumber.value = vehicle.insurancePolicyNumber === '—' ? '' : vehicle.insurancePolicyNumber
+  insurancePeriodStart.value = vehicle.insurancePeriodStart === '—' ? '' : vehicle.insurancePeriodStart
+  insurancePeriodEnd.value = vehicle.insurancePeriodEnd === '—' ? '' : vehicle.insurancePeriodEnd
+  insurancePremium.value = vehicle.insurancePremium === '—' ? '' : vehicle.insurancePremium
   iucDueDate.value = vehicle.iucDueDate === '—' ? '' : vehicle.iucDueDate
 }
 
@@ -101,11 +113,15 @@ async function handleSubmit() {
     model: model.value,
     plate: plate.value,
     vin: vin.value,
+    color: color.value,
     odometer: odometer.value,
     registered: registered.value,
     nextInspection: nextInspection.value,
     insurer: insurer.value,
-    insuranceRenewal: insuranceRenewal.value,
+    insurancePolicyNumber: insurancePolicyNumber.value,
+    insurancePeriodStart: insurancePeriodStart.value,
+    insurancePeriodEnd: insurancePeriodEnd.value,
+    insurancePremium: insurancePremium.value,
     iucDueDate: iucDueDate.value,
   }
 
@@ -156,9 +172,15 @@ async function handleSubmit() {
           <Input id="plate" v-model="plate" placeholder="Ex.: AA-00-AA" required />
         </div>
 
-        <div class="flex flex-col gap-2">
-          <label for="vin" class="text-sm font-medium">VIN</label>
-          <Input id="vin" v-model="vin" placeholder="Número de chassis" />
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-2">
+            <label for="vin" class="text-sm font-medium">VIN</label>
+            <Input id="vin" v-model="vin" placeholder="Número de chassis" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label for="color" class="text-sm font-medium">Cor</label>
+            <Input id="color" v-model="color" placeholder="Ex.: Branco" />
+          </div>
         </div>
 
         <div class="flex flex-col gap-2">
@@ -177,15 +199,32 @@ async function handleSubmit() {
           </div>
         </div>
 
-        <div class="flex flex-col gap-2">
-          <label for="insurer" class="text-sm font-medium">Seguradora</label>
-          <Input id="insurer" v-model="insurer" placeholder="Ex.: Fidelidade" />
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-2">
+            <label for="insurer" class="text-sm font-medium">Seguradora</label>
+            <Input id="insurer" v-model="insurer" placeholder="Ex.: Fidelidade" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label for="insurance-policy-number" class="text-sm font-medium">Nº da apólice</label>
+            <Input id="insurance-policy-number" v-model="insurancePolicyNumber" placeholder="Ex.: AP-12345" />
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium">Renovação do seguro</label>
-            <DatePicker v-model="insuranceRenewal" />
+            <label class="text-sm font-medium">Início do período</label>
+            <DatePicker v-model="insurancePeriodStart" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label class="text-sm font-medium">Fim do período</label>
+            <DatePicker v-model="insurancePeriodEnd" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-2">
+            <label for="insurance-premium" class="text-sm font-medium">Valor do prémio</label>
+            <Input id="insurance-premium" v-model="insurancePremium" placeholder="Ex.: 350,00" />
           </div>
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium">Data do IUC</label>

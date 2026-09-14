@@ -14,8 +14,9 @@ public class AutoEndpointHandlersTests
         new(new DbContextOptionsBuilder<AutoDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
 
     private static VehicleUpsertRequest NewVehicleRequest() => new(
-        VehicleCategory.Ligeiros, "Toyota", "Corolla", "AA-00-BB", "VIN123",
-        "Pedro", 10_000, new DateOnly(2020, 1, 1), null, "Fidelidade", null, null);
+        VehicleCategory.Ligeiros, "Toyota", "Corolla", "AA-00-BB", "VIN123", "Branco",
+        "Pedro", 10_000, new DateOnly(2020, 1, 1), null, "Fidelidade", "AP-12345",
+        new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1), 350.00m, null);
 
     [Fact]
     public async Task CreateVehicle_PersistsAndPublishesCreatedEvent()
@@ -28,6 +29,9 @@ public class AutoEndpointHandlersTests
 
         var created = Assert.IsType<Created<VehicleResponse>>(result);
         Assert.Equal("Toyota", created.Value!.Brand);
+        Assert.Equal("Branco", created.Value.Color);
+        Assert.Equal("AP-12345", created.Value.InsurancePolicyNumber);
+        Assert.Equal(350.00m, created.Value.InsurancePremium);
         Assert.Equal(1, await db.Vehicles.CountAsync());
         Assert.Single(events.Published);
     }
@@ -89,6 +93,7 @@ public class AutoEndpointHandlersTests
 
         var ok = Assert.IsType<Ok<VehicleResponse>>(result);
         Assert.Equal(55_000, ok.Value!.Odometer);
+        Assert.Equal("Branco", ok.Value.Color);
     }
 
     [Fact]

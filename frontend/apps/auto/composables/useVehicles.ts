@@ -11,11 +11,15 @@ export interface VehicleFormInput {
   model: string
   plate: string
   vin: string
+  color: string
   odometer: string
   registered: string
   nextInspection: string
   insurer: string
-  insuranceRenewal: string
+  insurancePolicyNumber: string
+  insurancePeriodStart: string
+  insurancePeriodEnd: string
+  insurancePremium: string
   iucDueDate: string
 }
 
@@ -44,10 +48,14 @@ function mapVehicleFromApi(dto: ApiVehicle): Vehicle {
     plate: dto.plate,
     status: dto.status,
     vin: dto.vin || '—',
+    color: dto.color || '—',
     registered: fromIso(dto.registered),
     nextInspection: fromIso(dto.nextInspection),
     insurer: dto.insurer || '—',
-    insuranceRenewal: fromIso(dto.insuranceRenewal),
+    insurancePolicyNumber: dto.insurancePolicyNumber || '—',
+    insurancePeriodStart: fromIso(dto.insurancePeriodStart),
+    insurancePeriodEnd: fromIso(dto.insurancePeriodEnd),
+    insurancePremium: dto.insurancePremium != null ? formatCostValue(Number(dto.insurancePremium)) : '—',
     iucDueDate: fromIso(dto.iucDueDate),
     odometer: formatKmValue(Number(dto.odometer)),
     maintenances: [],
@@ -180,12 +188,16 @@ export function useVehicles() {
         model: input.model,
         plate: input.plate,
         vin: input.vin,
+        color: input.color || null,
         driver: null,
         odometer: parseKmValue(input.odometer),
         registered: toIso(input.registered) ?? new Date().toISOString().slice(0, 10),
         nextInspection: toIso(input.nextInspection),
         insurer: input.insurer || null,
-        insuranceRenewal: toIso(input.insuranceRenewal),
+        insurancePolicyNumber: input.insurancePolicyNumber || null,
+        insurancePeriodStart: toIso(input.insurancePeriodStart),
+        insurancePeriodEnd: toIso(input.insurancePeriodEnd),
+        insurancePremium: input.insurancePremium ? parseCostValue(input.insurancePremium) : null,
         iucDueDate: toIso(input.iucDueDate),
       },
     })
@@ -205,12 +217,16 @@ export function useVehicles() {
         model: input.model,
         plate: input.plate,
         vin: input.vin,
+        color: input.color || null,
         driver: null,
         odometer: parseKmValue(input.odometer),
         registered: toIso(input.registered) ?? new Date().toISOString().slice(0, 10),
         nextInspection: toIso(input.nextInspection),
         insurer: input.insurer || null,
-        insuranceRenewal: toIso(input.insuranceRenewal),
+        insurancePolicyNumber: input.insurancePolicyNumber || null,
+        insurancePeriodStart: toIso(input.insurancePeriodStart),
+        insurancePeriodEnd: toIso(input.insurancePeriodEnd),
+        insurancePremium: input.insurancePremium ? parseCostValue(input.insurancePremium) : null,
         iucDueDate: toIso(input.iucDueDate),
       },
     })

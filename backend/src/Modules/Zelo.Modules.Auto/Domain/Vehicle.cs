@@ -9,8 +9,8 @@ internal sealed class Vehicle
     public required string Model { get; set; }
     public required string Plate { get; set; }
     public required string Vin { get; set; }
-    public string? Color { get; set; }
     public VehicleStatus Status { get; set; } = VehicleStatus.Ativo;
+    public string? Color { get; set; }
     public string? Driver { get; set; }
     public int Odometer { get; set; }
     public DateOnly Registered { get; set; }

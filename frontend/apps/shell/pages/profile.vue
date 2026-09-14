@@ -1,13 +1,62 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { useHousehold } from '../composables/useHousehold'
 import Avatar from '@zelo/ui/components/ui/Avatar.vue'
 import Button from '@zelo/ui/components/ui/Button.vue'
 import Card from '@zelo/ui/components/ui/Card.vue'
 import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
 import CardTitle from '@zelo/ui/components/ui/CardTitle.vue'
 import CardContent from '@zelo/ui/components/ui/CardContent.vue'
+import Input from '@zelo/ui/components/ui/Input.vue'
 
 const { user } = useAuth()
+const { households, rename, create } = useHousehold()
+
+// Nomes em edição, indexados por household id - só entra em modo de
+// edição quando o utilizador clica em "Mudar nome" naquele household.
+const editingId = ref<string | null>(null)
+const editingName = ref('')
+const isSaving = ref(false)
+const errorMessage = ref('')
+
+function startEditing(householdId: string, currentName: string) {
+  editingId.value = householdId
+  editingName.value = currentName
+  errorMessage.value = ''
+}
+
+async function saveEditing() {
+  if (!editingId.value) return
+  isSaving.value = true
+  errorMessage.value = ''
+  try {
+    await rename(editingId.value, editingName.value)
+    editingId.value = null
+  } catch (err) {
+    errorMessage.value = err instanceof Error ? err.message : 'Não foi possível mudar o nome.'
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const isAddingHousehold = ref(false)
+const newHouseholdName = ref('')
+
+async function addHousehold() {
+  if (!newHouseholdName.value.trim()) return
+  isSaving.value = true
+  errorMessage.value = ''
+  try {
+    await create(newHouseholdName.value)
+    newHouseholdName.value = ''
+    isAddingHousehold.value = false
+  } catch (err) {
+    errorMessage.value = err instanceof Error ? err.message : 'Não foi possível criar o household.'
+  } finally {
+    isSaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -61,6 +110,47 @@ const { user } = useAuth()
             </p>
             <Button variant="outline" size="sm">Ativar 2FA</Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Households</CardTitle>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-4">
+          <p v-if="errorMessage" class="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+            {{ errorMessage }}
+          </p>
+
+          <div v-for="household in households" :key="household.id" class="flex flex-col gap-2 border-b border-border pb-4 last:border-0 last:pb-0">
+            <template v-if="editingId === household.id">
+              <Input v-model="editingName" placeholder="Nome do household" />
+              <div class="flex gap-2">
+                <Button size="sm" :disabled="isSaving" @click="saveEditing">Guardar</Button>
+                <Button size="sm" variant="outline" :disabled="isSaving" @click="editingId = null">Cancelar</Button>
+              </div>
+            </template>
+            <template v-else>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium">{{ household.name }}</p>
+                  <p class="text-xs text-muted-foreground">{{ household.role === 'Owner' ? 'Dono' : 'Membro' }}</p>
+                </div>
+                <Button v-if="household.role === 'Owner'" size="sm" variant="outline" @click="startEditing(household.id, household.name)">
+                  Mudar nome
+                </Button>
+              </div>
+            </template>
+          </div>
+
+          <template v-if="isAddingHousehold">
+            <Input v-model="newHouseholdName" placeholder="Nome do novo household" />
+            <div class="flex gap-2">
+              <Button size="sm" :disabled="isSaving" @click="addHousehold">Criar</Button>
+              <Button size="sm" variant="outline" :disabled="isSaving" @click="isAddingHousehold = false">Cancelar</Button>
+            </div>
+          </template>
+          <Button v-else size="sm" variant="outline" @click="isAddingHousehold = true">+ Adicionar household</Button>
         </CardContent>
       </Card>
     </div>

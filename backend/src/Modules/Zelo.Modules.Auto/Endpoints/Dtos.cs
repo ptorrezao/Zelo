@@ -109,3 +109,44 @@ internal sealed record VehicleStatsResponse(
     int KmsLastMonth,
     decimal MaintenanceCostLastMonth,
     int MaintenanceCountLastMonth);
+
+internal sealed record ImportConnectRequest(string BaseUrl, string Email, string Password, Guid? RemoteHouseholdId);
+
+internal enum ImportPreviewStatus { ChooseHousehold, VehiclesReady }
+
+internal sealed record ImportHouseholdOption(Guid Id, string Name);
+
+internal sealed record ImportCandidateVehicle(
+    VehicleCategory Category,
+    string Brand,
+    string Model,
+    string Plate,
+    string Vin,
+    string? Color,
+    string? Driver,
+    int Odometer,
+    DateOnly Registered,
+    DateOnly? NextInspection,
+    string? Insurer,
+    string? InsurancePolicyNumber,
+    DateOnly? InsurancePeriodStart,
+    DateOnly? InsurancePeriodEnd,
+    decimal? InsurancePremium,
+    DateOnly? IucDueDate);
+
+internal sealed record ImportPreviewItem(ImportCandidateVehicle Vehicle, bool AlreadyExists);
+
+/// Households so vem preenchido quando Status = ChooseHousehold (o
+/// utilizador de origem tem mais que um, o frontend tem de escolher e
+/// chamar o preview outra vez com RemoteHouseholdId). Vehicles so vem
+/// preenchido quando Status = VehiclesReady.
+internal sealed record ImportPreviewResponse(
+    ImportPreviewStatus Status,
+    IReadOnlyList<ImportHouseholdOption> Households,
+    IReadOnlyList<ImportPreviewItem> Vehicles);
+
+internal sealed record ImportConfirmRequest(IReadOnlyList<ImportCandidateVehicle> Vehicles);
+
+internal sealed record ImportResultItem(string Plate, bool Imported, string? SkipReason);
+
+internal sealed record ImportConfirmResponse(int ImportedCount, int SkippedCount, IReadOnlyList<ImportResultItem> Items);

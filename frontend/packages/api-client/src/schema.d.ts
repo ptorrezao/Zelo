@@ -496,6 +496,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auto/vehicle-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: string[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auto/vehicles": {
         parameters: {
             query?: never;
@@ -943,6 +980,232 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HouseholdResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["HouseholdUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HouseholdResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["HouseholdUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HouseholdResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auto/vehicles/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query: {
+                    householdId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ImportConnectRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportPreviewResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auto/vehicles/import/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query: {
+                    householdId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ImportConfirmRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportConfirmResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1127,6 +1390,7 @@ export interface components {
             vin: string;
             color: null | string;
             status: components["schemas"]["VehicleStatus"];
+            color: null | string;
             driver: null | string;
             /** Format: int32 */
             odometer: number | string;
@@ -1169,6 +1433,78 @@ export interface components {
             insurancePremium: null | number | string;
             /** Format: date */
             iucDueDate: null | string;
+        };
+        /** @enum {unknown} */
+        HouseholdRole: "Owner" | "Member";
+        HouseholdResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            role: components["schemas"]["HouseholdRole"];
+        };
+        HouseholdUpdateRequest: {
+            name: string;
+        };
+        ImportConnectRequest: {
+            baseUrl: string;
+            email: string;
+            password: string;
+            /** Format: uuid */
+            remoteHouseholdId: null | string;
+        };
+        /** @enum {unknown} */
+        ImportPreviewStatus: "ChooseHousehold" | "VehiclesReady";
+        ImportHouseholdOption: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        ImportCandidateVehicle: {
+            category: components["schemas"]["VehicleCategory"];
+            brand: string;
+            model: string;
+            plate: string;
+            vin: string;
+            color: null | string;
+            driver: null | string;
+            /** Format: int32 */
+            odometer: number | string;
+            /** Format: date */
+            registered: string;
+            /** Format: date */
+            nextInspection: null | string;
+            insurer: null | string;
+            /** Format: date */
+            insuranceRenewal: null | string;
+            /** Format: date */
+            iucDueDate: null | string;
+        };
+        ImportPreviewItem: {
+            vehicle: components["schemas"]["ImportCandidateVehicle"];
+            alreadyExists: boolean;
+        };
+        ImportPreviewResponse: {
+            status: components["schemas"]["ImportPreviewStatus"];
+            households: components["schemas"]["ImportHouseholdOption"][];
+            vehicles: components["schemas"]["ImportPreviewItem"][];
+        };
+        ImportConfirmRequest: {
+            vehicles: components["schemas"]["ImportCandidateVehicle"][];
+        };
+        ImportResultItem: {
+            plate: string;
+            imported: boolean;
+            skipReason: null | string;
+        };
+        ImportErrorResponse: {
+            error: string;
+        };
+        ImportConfirmResponse: {
+            /** Format: int32 */
+            importedCount: number | string;
+            /** Format: int32 */
+            skippedCount: number | string;
+            items: components["schemas"]["ImportResultItem"][];
         };
     };
     responses: never;

@@ -51,7 +51,7 @@ onBeforeUnmount(() => {
       <div
         v-if="open"
         :class="[
-          'fixed inset-y-0 z-50 flex w-full max-w-md flex-col gap-4 border-border bg-background p-6 shadow-lg',
+          'fixed inset-y-0 z-50 flex w-full max-w-xl flex-col gap-4 border-border bg-background p-6 shadow-lg',
           side === 'right' ? 'right-0 border-l' : 'left-0 border-r',
           props.class,
         ]"

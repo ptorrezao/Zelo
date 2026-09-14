@@ -1,8 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <!-- Para IEndpointFilter/RouteGroupBuilder (RequireFeatureFlag), sem
-         ser um projeto Sdk.Web inteiro. -->
+    <!-- Para IEndpointFilter/RouteGroupBuilder (RequireFeatureFlag,
+         RequireHouseholdMembership), sem ser um projeto Sdk.Web inteiro. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- IHouseholdMembershipChecker (RequireHouseholdMembership) - sem
+         risco de ciclo, Zelo.SharedKernel nao depende de nada. -->
+    <ProjectReference Include="..\Zelo.SharedKernel\Zelo.SharedKernel.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Microsoft.Extensions.Configuration.Abstractions / .Diagnostics.HealthChecks

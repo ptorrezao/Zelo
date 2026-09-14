@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Zelo.Modules.Identity.Domain;
 using Zelo.Modules.Identity.Infrastructure;
+using Zelo.SharedKernel;
 
 namespace Zelo.Modules.Identity;
 
@@ -24,6 +25,7 @@ public static class IdentityModule
 
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.AddTransient<IEmailSender<ZeloUser>, SmtpEmailSender>();
+        services.AddScoped<IHouseholdMembershipChecker, HouseholdMembershipChecker>();
 
         services.AddAuthorization();
         services

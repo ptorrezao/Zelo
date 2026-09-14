@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,12 @@ public static class AutoModule
 
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.AddSingleton<IObjectStorage, GarageObjectStorage>();
+
+        services.AddHttpClient<IImportRemoteClient, ImportRemoteClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
         return services;
     }

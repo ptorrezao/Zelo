@@ -49,7 +49,7 @@ internal sealed class GarageObjectStorage : IObjectStorage
     public async Task UploadAsync(string objectKey, byte[] content, string contentType, CancellationToken ct = default)
     {
         using var stream = new MemoryStream(content);
-        await _internalClient.PutObjectAsync(new PutObjectRequest
+        var request = new PutObjectRequest
         {
             BucketName = _options.Bucket,
             Key = objectKey,
@@ -65,7 +65,15 @@ internal sealed class GarageObjectStorage : IObjectStorage
             // contrario de DisablePayloadSigning, nao exige HTTPS (o
             // Garage local nao tem TLS).
             UseChunkEncoding = false,
-        }, ct);
+        };
+        // A mesma object key e reescrita quando a foto e regenerada (ex.:
+        // mudar a cor) - sem isto o objeto fica sem Cache-Control, e um
+        // browser podia aplicar cache heuristica se por coincidencia
+        // pedisse duas vezes o mesmo URL pre-assinado (nao deveria
+        // acontecer, ja que cada resposta da Api gera um URL novo - isto
+        // e so para fechar essa fresta).
+        request.Headers.CacheControl = "no-store";
+        await _internalClient.PutObjectAsync(request, ct);
     }
 
     public Uri CreateReadUrl(string objectKey, TimeSpan validFor) =>

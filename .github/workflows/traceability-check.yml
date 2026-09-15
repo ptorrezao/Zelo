@@ -1,0 +1,53 @@
+name: traceability-check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  traceability:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required PR sections exist
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, sys
+          body = os.environ.get('PR_BODY', '') or ''
+          required = [
+              '## Summary',
+              '## ADR / issue',
+              '## Database / infra',
+              '## Tests',
+              '## Checklist',
+          ]
+          missing = [item for item in required if item.lower() not in body.lower()]
+          if missing:
+              print('Missing required sections:', ', '.join(missing))
+              sys.exit(1)
+          if 'adr' not in body.lower() and 'issue' not in body.lower():
+              print('PR must reference an ADR or issue.')
+              sys.exit(1)
+          print('PR traceability checks passed.')
+          PY
+
+      - name: Check for migration or docs note when relevant
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, sys
+          body = (os.environ.get('PR_BODY', '') or '').lower()
+          has_migration = 'migration' in body or 'migrations' in body
+          has_docs = 'docs' in body or 'documentation' in body or 'adr' in body
+          if not has_migration and 'database' in body:
+              print('Database changes should mention migrations or mark N/A explicitly.')
+              sys.exit(1)
+          if 'docs' in body or 'documentation' in body or 'adr' in body:
+              print('Documentation / ADR reference present.')
+          else:
+              print('No docs or ADR reference found; consider documenting the change.')
+          PY

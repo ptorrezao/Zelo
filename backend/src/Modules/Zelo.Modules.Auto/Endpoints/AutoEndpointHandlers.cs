@@ -424,12 +424,12 @@ internal static class AutoEndpointHandlers
     }
 
     public static async Task<IResult> CreateDocument(
-        Guid vehicleId, DocumentCreateRequest request, AutoDbContext db, CancellationToken ct)
+        Guid vehicleId, DocumentCreateRequest request, AutoDbContext db, IObjectStorage storage, CancellationToken ct)
     {
         var document = await CreateDocumentEntityAsync(vehicleId, request, db, ct);
         return document is null
             ? Results.NotFound()
-            : Results.Created($"/api/auto/documents/{document.Id}", DocumentResponse.From(document));
+            : Results.Created($"/api/auto/documents/{document.Id}", DocumentResponse.From(document, storage));
     }
 
     /// Partilhada com AutoMcpTools.CreateDocument.
@@ -459,16 +459,14 @@ internal static class AutoEndpointHandlers
     }
 
     public static async Task<List<DocumentResponse>> GetDocuments(
-        Guid vehicleId, DocumentCategory? category, AutoDbContext db, CancellationToken ct)
+        Guid vehicleId, DocumentCategory? category, AutoDbContext db, IObjectStorage storage, CancellationToken ct)
     {
         var query = db.Documents.Where(d => d.VehicleId == vehicleId);
         if (category is { } c)
             query = query.Where(d => d.Category == c);
 
-        return await query
-            .OrderByDescending(d => d.Date)
-            .Select(d => DocumentResponse.From(d))
-            .ToListAsync(ct);
+        var documents = await query.OrderByDescending(d => d.Date).ToListAsync(ct);
+        return [.. documents.Select(d => DocumentResponse.From(d, storage))];
     }
 
     public static async Task<IResult> DeleteDocument(Guid id, AutoDbContext db, CancellationToken ct) =>

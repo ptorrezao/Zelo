@@ -124,12 +124,13 @@ public class DtoMappingTests
             ObjectKey = "vehicles/x/y.pdf",
         };
 
-        var response = DocumentResponse.From(document);
+        var response = DocumentResponse.From(document, new FakeObjectStorage());
 
         Assert.Equal(document.Id, response.Id);
         Assert.Equal("Apólice de seguro", response.Name);
         Assert.Equal(DocumentCategory.Seguro, response.Category);
         Assert.Equal(DocumentType.Pdf, response.Type);
         Assert.Equal(128_000, response.SizeBytes);
+        Assert.Equal("http://storage.local/vehicles/x/y.pdf?read=1", response.DownloadUrl);
     }
 }

@@ -1655,6 +1655,7 @@ export interface components {
             date: string;
             /** Format: int64 */
             sizeBytes: number | string;
+            downloadUrl: string;
         };
         /** @enum {unknown} */
         DocumentType: "Pdf" | "Imagem";

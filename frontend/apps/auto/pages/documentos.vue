@@ -139,7 +139,9 @@ async function handleUpload() {
             <a
               v-for="doc in group.documents"
               :key="doc.id"
-              href="#"
+              :href="doc.downloadUrl"
+              target="_blank"
+              rel="noopener"
               class="flex items-center gap-3 p-3 transition-colors hover:bg-accent"
             >
               <span class="text-xl">{{ typeIcon[doc.type] || '📄' }}</span>

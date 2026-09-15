@@ -387,11 +387,11 @@ internal sealed class AutoMcpTools
         [Description("Id do household a que o veículo deve pertencer.")] Guid householdId,
         [Description("Id do veículo.")] Guid vehicleId,
         [Description("Filtra por categoria: Seguro, Manutencao, Inspecao, Registo ou Fatura. Omitir para listar todas.")] DocumentCategory? category,
-        AutoDbContext db, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+        AutoDbContext db, IObjectStorage storage, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
     {
         await EnsureMemberAsync(householdId, membership, httpContextAccessor, ct);
         await EnsureVehicleInHouseholdAsync(vehicleId, householdId, db, ct);
-        return await AutoEndpointHandlers.GetDocuments(vehicleId, category, db, ct);
+        return await AutoEndpointHandlers.GetDocuments(vehicleId, category, db, storage, ct);
     }
 
     [McpServerTool(Name = "create_document_upload_url", ReadOnly = true)]
@@ -421,7 +421,7 @@ internal sealed class AutoMcpTools
         [Description("Tipo de ficheiro: Pdf ou Imagem.")] DocumentType type,
         [Description("Data do documento, formato AAAA-MM-DD.")] DateOnly date,
         [Description("Tamanho do ficheiro em bytes.")] long sizeBytes,
-        AutoDbContext db, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+        AutoDbContext db, IObjectStorage storage, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
     {
         await EnsureMemberAsync(householdId, membership, httpContextAccessor, ct);
         await EnsureVehicleInHouseholdAsync(vehicleId, householdId, db, ct);
@@ -429,7 +429,7 @@ internal sealed class AutoMcpTools
         var request = new DocumentCreateRequest(objectKey, name, category, type, date, sizeBytes);
         var document = await AutoEndpointHandlers.CreateDocumentEntityAsync(vehicleId, request, db, ct)
             ?? throw new McpException("Veículo não encontrado neste household.");
-        return DocumentResponse.From(document);
+        return DocumentResponse.From(document, storage);
     }
 
     [McpServerTool(Name = "delete_document", Idempotent = true)]

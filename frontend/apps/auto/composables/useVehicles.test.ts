@@ -281,7 +281,7 @@ describe('useVehicles', () => {
       if (path === '/api/auto/vehicles/{vehicleId}/documents') {
         return Promise.resolve({
           data: {
-            id: 'd1', name: 'Apolice.pdf', category: 'Seguro', type: 'Pdf', date: '2026-01-01', sizeBytes: 1024,
+            id: 'd1', name: 'Apolice.pdf', category: 'Seguro', type: 'Pdf', date: '2026-01-01', sizeBytes: 1024, downloadUrl: 'https://storage.local/read/d1',
           },
         })
       }
@@ -298,6 +298,7 @@ describe('useVehicles', () => {
     const document = await addDocument('v1', file, 'Seguro', '01/01/2026')
 
     expect(document.name).toBe('Apolice.pdf')
+    expect(document.downloadUrl).toBe('https://storage.local/read/d1')
     expect(fetchMock).toHaveBeenCalledWith('https://storage.local/upload', expect.objectContaining({ method: 'PUT' }))
     expect(allVehicles.value.find(v => v.id === 'v1')?.documents).toHaveLength(1)
     vi.unstubAllGlobals()

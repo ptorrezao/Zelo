@@ -106,9 +106,14 @@ internal sealed record DocumentResponse(
     DocumentCategory Category,
     DocumentType Type,
     DateOnly Date,
-    long SizeBytes)
+    long SizeBytes,
+    string DownloadUrl)
 {
-    public static DocumentResponse From(VehicleDocument d) => new(d.Id, d.Name, d.Category, d.Type, d.Date, d.SizeBytes);
+    // Mesmo padrao de VehicleResponse.PhotoUrl - o ObjectKey nunca sai da
+    // Api, so uma URL de leitura pre-assinada e temporaria.
+    public static DocumentResponse From(VehicleDocument d, IObjectStorage storage) => new(
+        d.Id, d.Name, d.Category, d.Type, d.Date, d.SizeBytes,
+        storage.CreateReadUrl(d.ObjectKey, TimeSpan.FromMinutes(15)).ToString());
 }
 
 internal sealed record VehicleStatsResponse(

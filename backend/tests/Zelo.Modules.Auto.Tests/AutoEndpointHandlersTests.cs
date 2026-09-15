@@ -303,7 +303,7 @@ public class AutoEndpointHandlersTests
     {
         await using var db = NewDb();
 
-        var result = await AutoEndpointHandlers.CreateDocument(Guid.NewGuid(), NewDocumentRequest(), db, CancellationToken.None);
+        var result = await AutoEndpointHandlers.CreateDocument(Guid.NewGuid(), NewDocumentRequest(), db, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.IsType<NotFound>(result);
     }
@@ -316,7 +316,7 @@ public class AutoEndpointHandlersTests
         db.Vehicles.Add(vehicle);
         await db.SaveChangesAsync();
 
-        var result = await AutoEndpointHandlers.CreateDocument(vehicle.Id, NewDocumentRequest(), db, CancellationToken.None);
+        var result = await AutoEndpointHandlers.CreateDocument(vehicle.Id, NewDocumentRequest(), db, new FakeObjectStorage(), CancellationToken.None);
 
         var created = Assert.IsType<Created<DocumentResponse>>(result);
         Assert.Equal("Apolice.pdf", created.Value!.Name);
@@ -332,8 +332,8 @@ public class AutoEndpointHandlersTests
             NewDocument(vehicleId, DocumentCategory.Manutencao));
         await db.SaveChangesAsync();
 
-        var onlyInsurance = await AutoEndpointHandlers.GetDocuments(vehicleId, DocumentCategory.Seguro, db, CancellationToken.None);
-        var all = await AutoEndpointHandlers.GetDocuments(vehicleId, null, db, CancellationToken.None);
+        var onlyInsurance = await AutoEndpointHandlers.GetDocuments(vehicleId, DocumentCategory.Seguro, db, new FakeObjectStorage(), CancellationToken.None);
+        var all = await AutoEndpointHandlers.GetDocuments(vehicleId, null, db, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.Single(onlyInsurance);
         Assert.Equal(2, all.Count);

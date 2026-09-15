@@ -96,6 +96,7 @@ function mapDocumentFromApi(dto: ApiDocument): VehicleDocument {
     type: dto.type.toLowerCase() as VehicleDocument['type'],
     date: fromIso(dto.date),
     size: formatBytes(Number(dto.sizeBytes)),
+    downloadUrl: dto.downloadUrl,
   }
 }
 

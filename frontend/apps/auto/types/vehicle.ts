@@ -37,6 +37,7 @@ export interface VehicleDocument {
   type: 'pdf' | 'imagem'
   date: string
   size: string
+  downloadUrl: string
 }
 
 export interface Vehicle {

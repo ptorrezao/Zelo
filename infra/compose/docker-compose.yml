@@ -128,27 +128,24 @@ services:
       - "3901:3901" # RPC (cluster, sem uso num nó unico)
       - "3903:3903" # admin API
 
-  # So para desenvolvimento local: navegar o bucket do Garage pela linha
-  # de comandos (ver README.md, seccao Garage) - o Garage nao tem UI web
-  # propria. Nao arranca com "docker compose up -d" sozinho (profile
-  # dedicado) - so quando pedido, com "docker compose --profile tools up -d".
-  # host.docker.internal (nao "garage", nao "localhost") porque tem de
-  # resolver tanto de dentro do container (docker compose exec) como do
-  # browser no Windows host (mc share download imprime um URL com este
-  # host - o Docker Desktop para Windows resolve-o dos dois lados).
+  # So para desenvolvimento local: UI web para navegar o bucket do
+  # Garage (que nao tem UI propria). Filestash proxia tudo ele mesmo -
+  # o browser so fala com este container (localhost:8334), nunca
+  # diretamente com o Garage, por isso nao ha problema de host partilhado
+  # entre container/Windows (ao contrario do que aconteceria com URLs
+  # pre-assinadas geradas por uma CLI). Nao arranca com
+  # "docker compose up -d" sozinho (profile dedicado) - so quando pedido,
+  # com "docker compose --profile tools up -d s3-browser". Primeira vez:
+  # abrir http://localhost:8334, criar conta de admin local, e ligar um
+  # backend "S3" com Endpoint=http://garage:3900, path style ativado, e
+  # as credenciais de Storage__AccessKey/SecretKey (ver README.md).
   s3-browser:
-    image: quay.io/minio/mc:latest # minio/mc no Docker Hub foi descontinuado
+    image: machines/filestash:latest
     profiles: ["tools"]
+    ports:
+      - "8334:8334"
     volumes:
-      # "mc cp" para aqui poe o ficheiro acessivel diretamente no host,
-      # sem depender de nenhum URL/porta partilhada entre container e
-      # Windows (host.docker.internal nao resolveu de forma fiavel aqui).
-      - ./s3-downloads:/downloads
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set garage http://garage:3900 GK150252b5f2fe57b6e3250b27 bd257b59116ab67336fbe92145ffc0f7e4149d599f82070281dedd036af4579c &&
-      tail -f /dev/null
-      "
+      - s3browserdata:/app/data/state
     depends_on:
       garage: { condition: service_started }
 
@@ -198,3 +195,4 @@ volumes:
   garagemeta:
   garagedata:
   unleashdbdata:
+  s3browserdata: # conta de admin/ligacoes do Filestash (ver s3-browser)

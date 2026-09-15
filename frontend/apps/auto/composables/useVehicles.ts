@@ -414,6 +414,14 @@ export function useVehicles() {
     return document
   }
 
+  async function deleteDocument(vehicleId: string, documentId: string): Promise<void> {
+    const { error } = await client.DELETE("/api/auto/documents/{id}", { params: { path: { id: documentId } } })
+    if (error) throw new Error(extractApiErrorMessage(error, "Não foi possível eliminar o documento."))
+
+    const vehicle = allVehicles.value.find(v => v.id === vehicleId)
+    if (vehicle) vehicle.documents = vehicle.documents.filter(d => d.id !== documentId)
+  }
+
   return {
     groups,
     query,
@@ -439,6 +447,7 @@ export function useVehicles() {
     updateVehicle,
     addMaintenance,
     addDocument,
+    deleteDocument,
   }
 }
 

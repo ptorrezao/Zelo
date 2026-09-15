@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Trash2 } from '@lucide/vue'
 import Card from '@zelo/ui/components/ui/Card.vue'
 import CardHeader from '@zelo/ui/components/ui/CardHeader.vue'
 import CardTitle from '@zelo/ui/components/ui/CardTitle.vue'
@@ -10,7 +11,7 @@ import Select from '@zelo/ui/components/ui/Select.vue'
 import { useVehicles } from '../composables/useVehicles'
 import type { VehicleDocument } from '../types/vehicle'
 
-const { selected, fullName, addDocument } = useVehicles()
+const { selected, fullName, addDocument, deleteDocument } = useVehicles()
 
 const documentsByCategory = computed(() => {
   const groups = new Map<string, typeof selected.value.documents>()
@@ -43,6 +44,7 @@ const file = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
 const error = ref('')
+const deletingId = ref('')
 
 function handleFileChange(event: Event) {
   file.value = (event.target as HTMLInputElement).files?.[0] ?? null
@@ -77,6 +79,20 @@ async function handleUpload() {
     error.value = err instanceof Error ? err.message : 'Não foi possível anexar o documento.'
   } finally {
     isUploading.value = false
+  }
+}
+
+async function handleDelete(documentId: string) {
+  if (!selected.value) return
+  if (!confirm('Eliminar este documento?')) return
+
+  deletingId.value = documentId
+  try {
+    await deleteDocument(selected.value.id, documentId)
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Não foi possível eliminar o documento.'
+  } finally {
+    deletingId.value = ''
   }
 }
 </script>
@@ -129,6 +145,13 @@ async function handleUpload() {
           </div>
         </form>
 
+        <div
+          v-if="error && !isFormOpen"
+          class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {{ error }}
+        </div>
+
         <p v-if="!selected?.documents?.length" class="text-sm text-muted-foreground">
           Nenhum documento disponível para este veículo.
         </p>
@@ -136,20 +159,28 @@ async function handleUpload() {
         <div v-for="group in documentsByCategory" :key="group.category" class="flex flex-col gap-2">
           <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ group.category }}</h3>
           <div class="flex flex-col divide-y divide-border rounded-md border border-border">
-            <a
+            <div
               v-for="doc in group.documents"
               :key="doc.id"
-              :href="doc.downloadUrl"
-              target="_blank"
-              rel="noopener"
               class="flex items-center gap-3 p-3 transition-colors hover:bg-accent"
             >
-              <span class="text-xl">{{ typeIcon[doc.type] || '📄' }}</span>
-              <div class="flex min-w-0 flex-1 flex-col">
-                <span class="truncate text-sm font-medium">{{ doc.name }}</span>
-                <span class="text-xs text-muted-foreground">{{ doc.date }} · {{ doc.size }}</span>
-              </div>
-            </a>
+              <a :href="doc.downloadUrl" target="_blank" rel="noopener" class="flex min-w-0 flex-1 items-center gap-3">
+                <span class="text-xl">{{ typeIcon[doc.type] || '📄' }}</span>
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <span class="truncate text-sm font-medium">{{ doc.name }}</span>
+                  <span class="text-xs text-muted-foreground">{{ doc.date }} · {{ doc.size }}</span>
+                </div>
+              </a>
+              <Button
+                variant="ghost"
+                size="icon"
+                :disabled="deletingId === doc.id"
+                aria-label="Eliminar documento"
+                @click="handleDelete(doc.id)"
+              >
+                <Trash2 class="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>

@@ -4,7 +4,7 @@ vi.mock('#app', () => ({
   useRuntimeConfig: () => ({ app: { baseURL: '/' } }),
 }))
 
-const client = { GET: vi.fn(), POST: vi.fn(), PUT: vi.fn() }
+const client = { GET: vi.fn(), POST: vi.fn(), PUT: vi.fn(), DELETE: vi.fn() }
 vi.mock('@zelo/ui/composables/useApiClient', () => ({
   useApiClient: () => client,
 }))
@@ -53,6 +53,7 @@ describe('useVehicles', () => {
     client.GET.mockReset()
     client.POST.mockReset()
     client.PUT.mockReset()
+    client.DELETE.mockReset()
     mockGet({})
   })
 
@@ -302,5 +303,25 @@ describe('useVehicles', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://storage.local/upload', expect.objectContaining({ method: 'PUT' }))
     expect(allVehicles.value.find(v => v.id === 'v1')?.documents).toHaveLength(1)
     vi.unstubAllGlobals()
+  })
+
+  it('deleteDocument chama o endpoint e remove o documento do veiculo', async () => {
+    mockGet({
+      '/api/auto/vehicles': [apiVehicle({ id: 'v1' })],
+      '/api/auto/vehicles/{vehicleId}/documents': [
+        { id: 'd1', name: 'Apolice.pdf', category: 'Seguro', type: 'Pdf', date: '2026-01-01', sizeBytes: 1024, downloadUrl: 'https://storage.local/read/d1' },
+      ],
+    })
+    client.DELETE.mockResolvedValue({ error: undefined })
+
+    const { useVehicles } = await import('./useVehicles')
+    const { deleteDocument, selected, isLoaded } = useVehicles()
+    await vi.waitFor(() => expect(isLoaded.value).toBe(true))
+    await vi.waitFor(() => expect(selected.value?.documents).toHaveLength(1))
+
+    await deleteDocument('v1', 'd1')
+
+    expect(client.DELETE).toHaveBeenCalledWith('/api/auto/documents/{id}', { params: { path: { id: 'd1' } } })
+    expect(selected.value?.documents).toHaveLength(0)
   })
 })

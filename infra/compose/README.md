@@ -47,6 +47,30 @@ compose) — nada manual a fazer. A chave é importada com um valor fixo
 (`/v1/key/import`) em vez de gerada, precisamente para poder ficar
 hardcoded no compose como as outras credenciais de dev.
 
+### Ver os ficheiros guardados (`s3-browser`)
+
+O Garage não tem UI web própria. Para navegar o bucket localmente, usa o
+[`mc`](https://min.io/docs/minio/linux/reference/minio-mc.html) (cliente
+oficial, compatível com qualquer S3, incluindo Garage) já pré-configurado
+num serviço à parte — só arranca quando pedido:
+
+```bash
+docker compose -f infra/compose/docker-compose.yml --profile tools up -d s3-browser
+
+# listar tudo
+docker compose -f infra/compose/docker-compose.yml exec s3-browser mc ls --recursive garage/zelo-documents
+
+# ver detalhes de um ficheiro
+docker compose -f infra/compose/docker-compose.yml exec s3-browser mc stat garage/zelo-documents/vehicles/<id>/photo.png
+
+# copiar um ficheiro para infra/compose/s3-downloads/ (montado no host) -
+# depois abre-se normalmente com qualquer visualizador do Windows
+docker compose -f infra/compose/docker-compose.yml exec s3-browser mc cp garage/zelo-documents/vehicles/<id>/photo.png /downloads/
+```
+
+`infra/compose/s3-downloads/` é só um scratch local (git-ignored) — pode
+ser apagado a qualquer momento.
+
 ## Mailhog (`mailhog`) — captura de emails
 
 | | |

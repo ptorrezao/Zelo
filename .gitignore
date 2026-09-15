@@ -31,3 +31,6 @@ coverage/
 # SO
 .DS_Store
 Thumbs.db
+
+# Scratch local (ver infra/compose/README.md, s3-browser)
+infra/compose/s3-downloads/

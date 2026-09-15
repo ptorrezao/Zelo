@@ -3,6 +3,7 @@ using Xunit;
 using Zelo.Contracts;
 using Zelo.Modules.Core.Consumers;
 using Zelo.Modules.Core.Infrastructure;
+using Zelo.Modules.Core.Domain;
 
 namespace Zelo.Modules.Core.Tests;
 
@@ -185,5 +186,60 @@ public class EventHandlerTests
 
         Assert.Equal(0, await db.Assets.CountAsync());
         Assert.Equal(0, await db.Obligations.CountAsync());
+    }
+
+    [Fact]
+    public async Task ObligationReminderDueHandler_GravaLogEEnviaEmailATodosOsMembros()
+    {
+        await using var db = NewDb();
+        var obligationId = Guid.NewGuid();
+        var householdId = Guid.NewGuid();
+        var emailSender = new FakeNotificationEmailSender();
+        var handler = new ObligationReminderDueHandler(db, new FakeMembershipChecker(["a@x.com", "b@x.com"]), emailSender);
+
+        await handler.HandleAsync(
+            new ObligationReminderDue(Guid.NewGuid(), DateTimeOffset.UtcNow, obligationId, householdId, "Inspeção", new DateOnly(2027, 1, 1), 10),
+            CancellationToken.None);
+
+        Assert.Equal(1, await db.NotificationLogs.CountAsync());
+        Assert.Equal(2, emailSender.SentTo.Count);
+    }
+
+    [Fact]
+    public async Task ObligationReminderDueHandler_JaNotificado_NaoRepeteNemReenviaEmail()
+    {
+        await using var db = NewDb();
+        var obligationId = Guid.NewGuid();
+        var householdId = Guid.NewGuid();
+        db.NotificationLogs.Add(new NotificationLog { Id = obligationId, ObligationId = obligationId, HouseholdId = householdId, DaysUntilDue = 10, TriggeredAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
+        var emailSender = new FakeNotificationEmailSender();
+        var handler = new ObligationReminderDueHandler(db, new FakeMembershipChecker(["a@x.com"]), emailSender);
+
+        await handler.HandleAsync(
+            new ObligationReminderDue(Guid.NewGuid(), DateTimeOffset.UtcNow, obligationId, householdId, "Inspeção", new DateOnly(2027, 1, 1), 10),
+            CancellationToken.None);
+
+        Assert.Equal(1, await db.NotificationLogs.CountAsync());
+        Assert.Empty(emailSender.SentTo);
+    }
+
+    [Fact]
+    public async Task ObligationReminderDueHandler_EmailDesativado_GravaLogMasNaoEnvia()
+    {
+        await using var db = NewDb();
+        var obligationId = Guid.NewGuid();
+        var householdId = Guid.NewGuid();
+        db.NotificationPreferences.Add(new NotificationPreference { HouseholdId = householdId, EmailEnabled = false });
+        await db.SaveChangesAsync();
+        var emailSender = new FakeNotificationEmailSender();
+        var handler = new ObligationReminderDueHandler(db, new FakeMembershipChecker(["a@x.com"]), emailSender);
+
+        await handler.HandleAsync(
+            new ObligationReminderDue(Guid.NewGuid(), DateTimeOffset.UtcNow, obligationId, householdId, "Inspeção", new DateOnly(2027, 1, 1), 10),
+            CancellationToken.None);
+
+        Assert.Equal(1, await db.NotificationLogs.CountAsync());
+        Assert.Empty(emailSender.SentTo);
     }
 }

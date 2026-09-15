@@ -29,4 +29,12 @@ internal sealed class HouseholdMembershipChecker(IdentityDbContext db) : IHouseh
             ? null
             : new HouseholdSummary(membership.HouseholdId, membership.Household.Name, membership.Household.IsDefault);
     }
+
+    public async Task<IReadOnlyList<string>> GetMemberEmailsAsync(Guid householdId, CancellationToken ct = default) =>
+        await db.HouseholdMembers
+            .Where(m => m.HouseholdId == householdId)
+            .Join(db.Users, m => m.UserId, u => u.Id, (m, u) => u.Email)
+            .Where(email => email != null)
+            .Select(email => email!)
+            .ToListAsync(ct);
 }

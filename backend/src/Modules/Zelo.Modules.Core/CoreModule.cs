@@ -23,6 +23,10 @@ public static class CoreModule
             connectionString,
             npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history", "core")));
 
+        services.Configure<NotificationEmailOptions>(configuration.GetSection(NotificationEmailOptions.SectionName));
+        services.AddSingleton<INotificationEmailSender, SmtpNotificationSender>();
+        services.AddSingleton(TimeProvider.System);
+
         return services;
     }
 
@@ -37,6 +41,8 @@ public static class CoreModule
         services.AddZeloEventHandler<ObligationUpdated, ObligationUpdatedHandler>("core.obligationupdated");
         services.AddZeloEventHandler<ObligationCompleted, ObligationCompletedHandler>("core.obligationcompleted");
         services.AddZeloEventHandler<HouseholdDeleted, HouseholdDeletedHandler>("core.householddeleted");
+        services.AddZeloEventHandler<ObligationReminderDue, ObligationReminderDueHandler>("core.obligationreminderdue");
+        services.AddHostedService<ObligationReminderCheckService>();
         return services;
     }
 

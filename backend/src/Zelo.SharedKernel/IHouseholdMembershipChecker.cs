@@ -24,4 +24,10 @@ public interface IHouseholdMembershipChecker
     /// mas nao Owner (unico que pode renomear), e ArgumentException se o
     /// nome for invalido.
     Task<HouseholdSummary?> RenameHouseholdAsync(Guid userId, Guid householdId, string name, CancellationToken ct = default);
+
+    /// Emails de todos os membros do household, para o Core enviar
+    /// notificacoes (ver plans/notifications.md) sem depender dos tipos
+    /// internos do Identity. Lista vazia se o household nao existir ou nao
+    /// tiver membros com email confirmado/definido.
+    Task<IReadOnlyList<string>> GetMemberEmailsAsync(Guid householdId, CancellationToken ct = default);
 }

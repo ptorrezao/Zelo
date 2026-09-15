@@ -3,6 +3,11 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Emails transacionais: HTML a serio, nao string C# interpolada -
+         edita-se e pre-visualiza-se como ficheiro normal. -->
+    <EmbeddedResource Include="Infrastructure\Emails\Templates\*.html" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\Zelo.SharedKernel\Zelo.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Zelo.Contracts\Zelo.Contracts.csproj" />
     <ProjectReference Include="..\..\Zelo.Messaging\Zelo.Messaging.csproj" />

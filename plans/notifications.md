@@ -291,7 +291,44 @@ public sealed record ObligationReminderDue(
 ```
 
 
-### 5.6 Templates Dinâmicos
+### 5.6 Provider de geração de imagens (feature flag)
+
+A geração de imagens associada a veículos deve ser tratada como uma decisão operacional de produto, não como configuração de infraestrutura.
+
+O módulo `Zelo.Modules.Auto` já abstrai este caso com `IVehicleImageGenerator` em
+`Infrastructure/IVehicleImageGenerator.cs`: isto é o ponto correto para trocar o fornecedor sem mexer no handler.
+
+Sugestão de desenho:
+
+- `VehicleImageProvider`: `Disabled`, `OpenAi`, `Gemini`
+- `IVehicleImageGeneratorSelector` / `VehicleImageGeneratorFactory`: resolve o provider atual
+- `OpenAiVehicleImageGenerator` e `GeminiVehicleImageGenerator` implementam a mesma interface
+- A decisão do provider vem das feature flags do Unleash, e não de valores hardcoded
+
+Recomendação prática para este repositório:
+
+- `auto-image-generation-enabled` — liga/desliga a funcionalidade
+- `auto-image-openai-enabled` — usa OpenAI quando ativo
+- `auto-image-gemini-enabled` — usa Gemini quando ativo
+
+Regra de resolução:
+
+1. Se `auto-image-generation-enabled` estiver desligada → não gerar imagem
+2. Se `auto-image-openai-enabled` estiver ligada → usa `OpenAiVehicleImageGenerator`
+3. Senão, se `auto-image-gemini-enabled` estiver ligada → usa `GeminiVehicleImageGenerator`
+4. Se nenhuma estiver ligada → fallback seguro: desativa a geração e regista aviso operacional
+
+Importante: não colocar em feature flag:
+
+- API keys
+- endpoints
+- timeouts
+- nomes de bucket / storage
+- credenciais de SMTP
+
+Essas devem continuar em `appsettings` / configurações de infra. Feature flag serve para controlar o comportamento do produto em tempo real e permitir rollout gradual.
+
+### 5.7 Templates Dinâmicos
 
 Os emails de lembrete devem usar templates dinâmicos para permitir i18n, personalização e fácil manutenção.
 
@@ -430,6 +467,27 @@ _ = PeriodicTimer(async () =>
     await scheduler.ProcessNotificationsAsync();
 }, TimeSpan.FromHours(1));
 ```
+
+### 8.3 Feature flags recomendadas
+
+Para o projeto atual, as feature flags fazem sentido para ligar ou desligar comportamento do produto e para rotear entre fornecedores de geração de imagem.
+
+Exemplo de flags do Unleash:
+
+```text
+auto-image-generation-enabled
+auto-image-openai-enabled
+auto-image-gemini-enabled
+```
+
+O bootstrap destas flags deve ser feito em `Zelo.MigrationRunner/UnleashBootstrap.cs`, seguindo o mesmo padrão das restantes flags do projeto (`auto-app-enabled`, `auto-mcp-enabled`, etc.).
+
+Em termos de regras de arquitetura:
+
+- a API não decide provedor; apenas o Worker resolve
+- a flag controla comportamento, não credenciais
+- a lógica de fallback fica no Worker, nunca no frontend
+- a escolha do provider é feita exatamente no ponto onde a geração de imagem corre
 
 ---
 

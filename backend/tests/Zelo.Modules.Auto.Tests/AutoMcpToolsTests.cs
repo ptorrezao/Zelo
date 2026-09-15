@@ -52,6 +52,9 @@ public class AutoMcpToolsTests
 
         public Task<HouseholdSummary?> RenameHouseholdAsync(Guid userId, Guid householdId, string name, CancellationToken ct = default) =>
             renameThrows is null ? Task.FromResult(renameResult) : throw renameThrows;
+
+        public Task<IReadOnlyList<string>> GetMemberEmailsAsync(Guid householdId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
     }
 
     private static Vehicle NewVehicle(Guid householdId, string brand = "Toyota", string model = "Corolla") => new()
@@ -192,7 +195,8 @@ public class AutoMcpToolsTests
 
         Assert.Equal("Toyota", result.Brand);
         Assert.Equal(1, await db.Vehicles.CountAsync());
-        Assert.Single(events.Published);
+        // AssetCreated + ObligationScheduled (seguro, InsurancePeriodEnd preenchido no pedido).
+        Assert.Equal(2, events.Published.Count);
     }
 
     [Fact]

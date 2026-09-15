@@ -7,6 +7,8 @@ internal sealed class CoreDbContext(DbContextOptions<CoreDbContext> options) : D
 {
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<Obligation> Obligations => Set<Obligation>();
+    public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

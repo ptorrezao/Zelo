@@ -27,6 +27,11 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
   </ItemGroup>
+  <ItemGroup Label="MCP">
+    <!-- SDK oficial (.NET Foundation) para expor tools MCP a agentes LLM -
+         ver docs/modules/module-contract.md, seccao 5, e AutoMcpTools. -->
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+  </ItemGroup>
   <ItemGroup Label="Mensageria">
     <!-- Ver ADR-002: LavinMQ (wire-compatible AMQP 0-9-1), atras de
          IEventPublisher/IEventHandler em Zelo.Messaging. -->

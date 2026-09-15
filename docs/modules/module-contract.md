@@ -29,7 +29,32 @@ public static Task MigrateAsync(IServiceProvider provider, CancellationToken ct 
   migrations do `DbContext` do módulo. Existe porque o `DbContext` é
   `internal` ao módulo — esta é a única porta de saída para o correr.
 
-Tudo o resto no módulo é `internal`.
+Tudo o resto no módulo é `internal`, com uma excepção opcional — ver
+secção 5.
+
+### 5. MCP (opcional)
+
+Um módulo pode expor um quinto método de extensão para dar a agentes LLM
+acesso às suas próprias tools, via [Model Context Protocol](https://modelcontextprotocol.io/):
+
+```csharp
+public static IEndpointRouteBuilder MapXptoMcpEndpoints(this IEndpointRouteBuilder app);
+```
+
+- Chamado APENAS pela `Api`, depois de `MapXptoEndpoints` — mapeia um
+  grupo de rota próprio (`/mcp/xpto`), com a sua própria feature flag
+  (`xpto-mcp-enabled`), atrás da mesma autenticação do resto do módulo.
+- As tools em si (`[McpServerToolType]`) ficam `internal`, junto dos
+  endpoint handlers — reutilizam a mesma lógica de negócio, nunca a
+  duplicam. Exemplo real: `AutoMcpTools`, montado por
+  `AutoModule.MapAutoMcpEndpoints`.
+- Uma tool que recebe `householdId` como argumento explícito (o MCP não
+  tem query string) tem de confirmar a membership e, quando o recurso não
+  tem `HouseholdId` próprio (ex.: uma manutenção, que só tem `VehicleId`),
+  confirmar também que esse recurso pertence a esse household — mesmo que
+  o endpoint REST equivalente não o faça.
+- Fica de fora qualquer capacidade que exija o agente manusear
+  credenciais ou segredos de terceiros (ex.: o fluxo de import do Auto).
 
 ## 2. Manifesto
 

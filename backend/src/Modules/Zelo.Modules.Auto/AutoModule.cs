@@ -1,11 +1,15 @@
 using System.Net.Http;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Zelo.Contracts;
 using Zelo.Messaging;
 using Zelo.Modules.Auto.Consumers;
+using Zelo.Modules.Auto.Endpoints;
 using Zelo.Modules.Auto.Infrastructure;
+using Zelo.ServiceDefaults;
 
 namespace Zelo.Modules.Auto;
 
@@ -33,7 +37,31 @@ public static class AutoModule
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
+        // AutoMcpTools precisa do ClaimsPrincipal do pedido para validar
+        // household membership - HttpContextAccessor nao vem registado por
+        // omissao. So tem efeito na Api (unico host que mapeia endpoints);
+        // inofensivo registar tambem no Worker/MigrationRunner.
+        services.AddHttpContextAccessor();
+        services.AddMcpServer()
+            .WithHttpTransport()
+            .WithTools<AutoMcpTools>(AutoMcpTools.SerializerOptions);
+
         return services;
+    }
+
+    /// Chamado APENAS pela Api, depois de app.Build() - tools MCP do
+    /// modulo, paralelas a MapAutoEndpoints mas com o seu proprio grupo de
+    /// rota e feature flag (ver docs/modules/module-contract.md, seccao 5).
+    public static IEndpointRouteBuilder MapAutoMcpEndpoints(this IEndpointRouteBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        app.MapGroup("/mcp/auto")
+            .RequireAuthorization()
+            .RequireFeatureFlag("auto-mcp-enabled")
+            .MapMcp();
+
+        return app;
     }
 
     /// Chamado APENAS pelo host Worker. Nunca pela Api.

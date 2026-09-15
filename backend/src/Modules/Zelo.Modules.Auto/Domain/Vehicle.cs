@@ -29,6 +29,10 @@ internal sealed class Vehicle
     /// saber que e a mesma obrigacao a reagendar, nao uma nova.
     public Guid? InspectionObligationId { get; set; }
 
+    /// Id da Obligation no Core criada/atualizada a partir de
+    /// InsurancePeriodEnd. Mesmo padrao que InspectionObligationId.
+    public Guid? InsuranceObligationId { get; set; }
+
     /// Object key no Garage da foto gerada automaticamente para este
     /// veiculo (ver VehiclePhotoHandler). Nulo ate a geracao acontecer ou
     /// se tiver falhado - nesse caso o frontend mostra o placeholder de

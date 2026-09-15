@@ -79,11 +79,14 @@ internal static class AutoEndpointHandlers
         await SaveOrThrowOnDuplicatePlateAsync(db, ct);
 
         await events.PublishAsync(VehicleEvents.Created(vehicle), ct);
-        if (VehicleEvents.SyncInspectionObligation(vehicle) is { } obligationEvent)
-        {
-            await db.SaveChangesAsync(ct); // grava o InspectionObligationId atribuido
-            await PublishObligationEventAsync(events, obligationEvent, ct);
-        }
+        var inspectionEvent = VehicleEvents.SyncInspectionObligation(vehicle);
+        var insuranceEvent = VehicleEvents.SyncInsuranceObligation(vehicle);
+        if (inspectionEvent is not null || insuranceEvent is not null)
+            await db.SaveChangesAsync(ct); // grava o(s) ObligationId atribuido(s)
+        if (inspectionEvent is not null)
+            await PublishObligationEventAsync(events, inspectionEvent, ct);
+        if (insuranceEvent is not null)
+            await PublishObligationEventAsync(events, insuranceEvent, ct);
 
         return vehicle;
     }
@@ -148,11 +151,14 @@ internal static class AutoEndpointHandlers
         if (colorChanged)
             vehicle.PhotoObjectKey = null;
 
-        var obligationEvent = VehicleEvents.SyncInspectionObligation(vehicle);
+        var inspectionEvent = VehicleEvents.SyncInspectionObligation(vehicle);
+        var insuranceEvent = VehicleEvents.SyncInsuranceObligation(vehicle);
         await SaveOrThrowOnDuplicatePlateAsync(db, ct);
 
-        if (obligationEvent is not null)
-            await PublishObligationEventAsync(events, obligationEvent, ct);
+        if (inspectionEvent is not null)
+            await PublishObligationEventAsync(events, inspectionEvent, ct);
+        if (insuranceEvent is not null)
+            await PublishObligationEventAsync(events, insuranceEvent, ct);
         if (colorChanged)
             await events.PublishAsync(VehicleEvents.Created(vehicle), ct);
 

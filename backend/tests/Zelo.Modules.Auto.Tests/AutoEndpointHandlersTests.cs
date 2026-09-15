@@ -53,7 +53,8 @@ public class AutoEndpointHandlersTests
         Assert.Equal("AP-12345", created.Value.InsurancePolicyNumber);
         Assert.Equal(350.00m, created.Value.InsurancePremium);
         Assert.Equal(1, await db.Vehicles.CountAsync());
-        Assert.Single(events.Published);
+        // AssetCreated + ObligationScheduled (seguro, InsurancePeriodEnd preenchido no pedido).
+        Assert.Equal(2, events.Published.Count);
     }
 
     [Fact]
@@ -105,9 +106,11 @@ public class AutoEndpointHandlersTests
 
         await AutoEndpointHandlers.CreateVehicle(Guid.NewGuid(), request, db, events, new FakeObjectStorage(), CancellationToken.None);
 
-        Assert.Equal(2, events.Published.Count);
+        // AssetCreated + ObligationScheduled (inspecao) + ObligationScheduled (seguro).
+        Assert.Equal(3, events.Published.Count);
         var vehicle = await db.Vehicles.FirstAsync();
         Assert.NotNull(vehicle.InspectionObligationId);
+        Assert.NotNull(vehicle.InsuranceObligationId);
     }
 
     [Fact]

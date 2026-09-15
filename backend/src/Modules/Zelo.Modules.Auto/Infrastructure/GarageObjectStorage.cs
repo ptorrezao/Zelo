@@ -59,10 +59,12 @@ internal sealed class GarageObjectStorage : IObjectStorage
             // O SDK assina o payload por omissao com streaming SigV4
             // (header "STREAMING-..." + trailer chunked) - o Garage nao
             // sabe interpretar isso e rejeita com "Invalid content sha256
-            // hash". UNSIGNED-PAYLOAD evita o streaming signing todo;
-            // seguro aqui porque o pedido ja vai por HTTPS/rede interna,
-            // nao expoe nada que a assinatura da request em si nao cubra.
-            DisablePayloadSigning = true,
+            // hash". Desligar so o chunk encoding mantem a assinatura
+            // normal (SHA256 do corpo inteiro, calculado a partida - o
+            // conteudo ja esta todo em memoria) sem o streaming - ao
+            // contrario de DisablePayloadSigning, nao exige HTTPS (o
+            // Garage local nao tem TLS).
+            UseChunkEncoding = false,
         }, ct);
     }
 

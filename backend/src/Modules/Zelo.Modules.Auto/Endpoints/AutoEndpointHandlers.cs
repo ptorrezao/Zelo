@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Zelo.Contracts;
 using Zelo.Messaging;
 using Zelo.Modules.Auto.Application;
@@ -18,27 +19,39 @@ internal static class AutoEndpointHandlers
 {
     public static IResult GetVehicleCatalog() => Results.Ok(VehicleCatalogLoader.Get());
 
-    public static async Task<List<VehicleResponse>> GetVehicles(Guid householdId, AutoDbContext db, CancellationToken ct) =>
-        await db.Vehicles
+    public static async Task<List<VehicleResponse>> GetVehicles(Guid householdId, AutoDbContext db, IObjectStorage storage, CancellationToken ct)
+    {
+        var vehicles = await db.Vehicles
             .Where(v => v.HouseholdId == householdId)
             .OrderBy(v => v.Brand).ThenBy(v => v.Model)
-            .Select(v => VehicleResponse.From(v))
             .ToListAsync(ct);
+        return [.. vehicles.Select(v => VehicleResponse.From(v, storage))];
+    }
 
     public static async Task<IResult> CreateVehicle(
-        Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
+        Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, IObjectStorage storage, CancellationToken ct)
     {
-        var vehicle = await CreateVehicleEntityAsync(householdId, request, db, events, ct);
-        return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle));
+        try
+        {
+            var vehicle = await CreateVehicleEntityAsync(householdId, request, db, events, ct);
+            return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle, storage));
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
     }
 
     /// Construcao/persistencia partilhada entre CreateVehicle, ConfirmImport
     /// e AutoMcpTools.CreateVehicle - todas precisam exatamente da mesma
-    /// logica (entidade + sync de inspecao + eventos), so a primeira devolve
-    /// um IResult.
+    /// logica (entidade + sync de inspecao + eventos + validacao), so a
+    /// primeira devolve um IResult. Lanca ArgumentException (ver
+    /// VehicleValidation) - quem chama decide como traduzir isso.
     internal static async Task<Vehicle> CreateVehicleEntityAsync(
         Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
     {
+        VehicleValidation.Validate(request);
+
         var vehicle = new Vehicle
         {
             Id = Guid.NewGuid(),
@@ -63,36 +76,61 @@ internal static class AutoEndpointHandlers
         };
 
         db.Vehicles.Add(vehicle);
-        await db.SaveChangesAsync(ct);
+        await SaveOrThrowOnDuplicatePlateAsync(db, ct);
 
         await events.PublishAsync(VehicleEvents.Created(vehicle), ct);
-        if (VehicleEvents.SyncInspectionObligation(vehicle) is { } obligationEvent)
-        {
-            await db.SaveChangesAsync(ct); // grava o InspectionObligationId atribuido
-            await PublishObligationEventAsync(events, obligationEvent, ct);
-        }
+        var inspectionEvent = VehicleEvents.SyncInspectionObligation(vehicle);
+        var insuranceEvent = VehicleEvents.SyncInsuranceObligation(vehicle);
+        if (inspectionEvent is not null || insuranceEvent is not null)
+            await db.SaveChangesAsync(ct); // grava o(s) ObligationId atribuido(s)
+        if (inspectionEvent is not null)
+            await PublishObligationEventAsync(events, inspectionEvent, ct);
+        if (insuranceEvent is not null)
+            await PublishObligationEventAsync(events, insuranceEvent, ct);
 
         return vehicle;
     }
 
-    public static async Task<IResult> GetVehicle(Guid id, AutoDbContext db, CancellationToken ct) =>
-        await db.Vehicles.FindAsync([id], ct) is { } v ? Results.Ok(VehicleResponse.From(v)) : Results.NotFound();
+    public static async Task<IResult> GetVehicle(Guid id, AutoDbContext db, IObjectStorage storage, CancellationToken ct) =>
+        await db.Vehicles.FindAsync([id], ct) is { } v ? Results.Ok(VehicleResponse.From(v, storage)) : Results.NotFound();
 
     public static async Task<IResult> UpdateVehicle(
-        Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
+        Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, IObjectStorage storage, CancellationToken ct)
     {
-        var vehicle = await UpdateVehicleEntityAsync(id, request, db, events, ct);
-        return vehicle is null ? Results.NotFound() : Results.Ok(VehicleResponse.From(vehicle));
+        try
+        {
+            var vehicle = await UpdateVehicleEntityAsync(id, request, db, events, ct);
+            return vehicle is null ? Results.NotFound() : Results.Ok(VehicleResponse.From(vehicle, storage));
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
     }
 
     /// Partilhada com AutoMcpTools.UpdateVehicle - devolve null (em vez de
-    /// IResult) para quem chama nao depender de tipos de Minimal API.
+    /// IResult) para quem chama nao depender de tipos de Minimal API. Lanca
+    /// ArgumentException (ver VehicleValidation) - quem chama decide como
+    /// traduzir isso.
     internal static async Task<Vehicle?> UpdateVehicleEntityAsync(
         Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
     {
         var vehicle = await db.Vehicles.FindAsync([id], ct);
         if (vehicle is null)
             return null;
+
+        VehicleValidation.Validate(request);
+
+        // Mudar a cor torna a foto gerada (presa a cor da criacao) errada -
+        // apaga a referencia e volta a publicar AssetCreated para o
+        // VehiclePhotoHandler gerar de novo. Os dois consumidores deste
+        // evento sao idempotentes por AssetId (ver AssetCreatedHandler no
+        // Core, e o guard "ja tem foto" no VehiclePhotoHandler), por isso
+        // reusar o mesmo evento em vez de um VehicleUpdated proprio e seguro.
+        // ponytail: nao apaga o objecto antigo no Garage (fica orfao) -
+        // limpar isso exigiria acompanhar a expiracao do bucket, sem valor
+        // imediato aqui.
+        var colorChanged = !string.Equals(vehicle.Color, request.Color, StringComparison.Ordinal);
 
         vehicle.Category = request.Category;
         vehicle.Brand = request.Brand;
@@ -110,14 +148,36 @@ internal static class AutoEndpointHandlers
         vehicle.InsurancePeriodEnd = request.InsurancePeriodEnd;
         vehicle.InsurancePremium = request.InsurancePremium;
         vehicle.IucDueDate = request.IucDueDate;
+        if (colorChanged)
+            vehicle.PhotoObjectKey = null;
 
-        var obligationEvent = VehicleEvents.SyncInspectionObligation(vehicle);
-        await db.SaveChangesAsync(ct);
+        var inspectionEvent = VehicleEvents.SyncInspectionObligation(vehicle);
+        var insuranceEvent = VehicleEvents.SyncInsuranceObligation(vehicle);
+        await SaveOrThrowOnDuplicatePlateAsync(db, ct);
 
-        if (obligationEvent is not null)
-            await PublishObligationEventAsync(events, obligationEvent, ct);
+        if (inspectionEvent is not null)
+            await PublishObligationEventAsync(events, inspectionEvent, ct);
+        if (insuranceEvent is not null)
+            await PublishObligationEventAsync(events, insuranceEvent, ct);
+        if (colorChanged)
+            await events.PublishAsync(VehicleEvents.Created(vehicle), ct);
 
         return vehicle;
+    }
+
+    /// A unicidade de (HouseholdId, Plate) e garantida por indice na BD
+    /// (ver VehicleConfiguration) - sem isto, duplicar uma matricula dava
+    /// um DbUpdateException/500 em vez de uma mensagem clara.
+    private static async Task SaveOrThrowOnDuplicatePlateAsync(AutoDbContext db, CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            throw new ArgumentException("Matrícula já existe neste household.");
+        }
     }
 
     public static async Task<IResult> DeleteVehicle(
@@ -145,17 +205,8 @@ internal static class AutoEndpointHandlers
 
     public static async Task<IResult> PreviewImport(
         Guid householdId, ImportConnectRequest request, ClaimsPrincipal caller,
-        AutoDbContext db, IImportRemoteClient remoteClient, CancellationToken ct)
+        HttpContext httpContext, AutoDbContext db, IImportRemoteClient remoteClient, CancellationToken ct)
     {
-        // O utilizador nao pode importar de si mesmo - seria sempre um
-        // no-op (os "veiculos de origem" ja sao os dele) e so serviria
-        // para confundir. Comparamos pelo email de login, nao pelo id -
-        // não sabemos o id do lado remoto sem autenticar lá primeiro, e
-        // aqui queremos bloquear ANTES de sequer tentar ligar.
-        var callerEmail = caller.FindFirstValue(ClaimTypes.Email) ?? caller.FindFirstValue(ClaimTypes.Name);
-        if (!string.IsNullOrEmpty(callerEmail) && string.Equals(callerEmail, request.Email, StringComparison.OrdinalIgnoreCase))
-            return Results.BadRequest(new { error = "Não pode importar veículos de si mesmo — indique as credenciais de outro utilizador." });
-
         if (!Uri.TryCreate(request.BaseUrl, UriKind.Absolute, out var baseUrl))
             return Results.BadRequest(new { error = "URL do ambiente de origem inválido." });
 
@@ -167,6 +218,16 @@ internal static class AutoEndpointHandlers
             // falhar (site mais antigo, ou o utilizador ja colou diretamente
             // o URL da API), fica-se com o URL original tal como veio.
             var apiBaseUrl = await remoteClient.ResolveApiBaseAsync(baseUrl, ct);
+
+            // So e no-op garantido se o ambiente remoto resolvido e este
+            // mesmo host (nao so o mesmo email - o mesmo utilizador tem
+            // legitimamente contas com o mesmo email em ambientes diferentes,
+            // e essa e precisamente a razao de existir esta funcionalidade).
+            var callerEmail = caller.FindFirstValue(ClaimTypes.Email) ?? caller.FindFirstValue(ClaimTypes.Name);
+            var isSameHost = string.Equals(apiBaseUrl.Authority, httpContext.Request.Host.ToUriComponent(), StringComparison.OrdinalIgnoreCase);
+            if (isSameHost && !string.IsNullOrEmpty(callerEmail) && string.Equals(callerEmail, request.Email, StringComparison.OrdinalIgnoreCase))
+                return Results.BadRequest(new { error = "Não pode importar veículos de si mesmo — indique as credenciais de outro utilizador." });
+
             var token = await remoteClient.LoginAsync(apiBaseUrl, request.Email, request.Password, ct);
 
             Guid remoteHouseholdId;
@@ -229,8 +290,18 @@ internal static class AutoEndpointHandlers
                 candidate.Insurer, candidate.InsurancePolicyNumber, candidate.InsurancePeriodStart,
                 candidate.InsurancePeriodEnd, candidate.InsurancePremium, candidate.IucDueDate);
 
-            await CreateVehicleEntityAsync(householdId, upsertRequest, db, events, ct);
-            results.Add(new ImportResultItem(candidate.Plate, true, null));
+            try
+            {
+                await CreateVehicleEntityAsync(householdId, upsertRequest, db, events, ct);
+                results.Add(new ImportResultItem(candidate.Plate, true, null));
+            }
+            catch (ArgumentException ex)
+            {
+                // Um veiculo invalido (ex.: sem cor, um campo que se
+                // tornou obrigatorio depois de outro ambiente ja o ter
+                // criado sem ele) nao deve parar o resto do lote.
+                results.Add(new ImportResultItem(candidate.Plate, false, ex.Message));
+            }
         }
 
         var importedCount = results.Count(r => r.Imported);
@@ -353,12 +424,12 @@ internal static class AutoEndpointHandlers
     }
 
     public static async Task<IResult> CreateDocument(
-        Guid vehicleId, DocumentCreateRequest request, AutoDbContext db, CancellationToken ct)
+        Guid vehicleId, DocumentCreateRequest request, AutoDbContext db, IObjectStorage storage, CancellationToken ct)
     {
         var document = await CreateDocumentEntityAsync(vehicleId, request, db, ct);
         return document is null
             ? Results.NotFound()
-            : Results.Created($"/api/auto/documents/{document.Id}", DocumentResponse.From(document));
+            : Results.Created($"/api/auto/documents/{document.Id}", DocumentResponse.From(document, storage));
     }
 
     /// Partilhada com AutoMcpTools.CreateDocument.
@@ -388,16 +459,14 @@ internal static class AutoEndpointHandlers
     }
 
     public static async Task<List<DocumentResponse>> GetDocuments(
-        Guid vehicleId, DocumentCategory? category, AutoDbContext db, CancellationToken ct)
+        Guid vehicleId, DocumentCategory? category, AutoDbContext db, IObjectStorage storage, CancellationToken ct)
     {
         var query = db.Documents.Where(d => d.VehicleId == vehicleId);
         if (category is { } c)
             query = query.Where(d => d.Category == c);
 
-        return await query
-            .OrderByDescending(d => d.Date)
-            .Select(d => DocumentResponse.From(d))
-            .ToListAsync(ct);
+        var documents = await query.OrderByDescending(d => d.Date).ToListAsync(ct);
+        return [.. documents.Select(d => DocumentResponse.From(d, storage))];
     }
 
     public static async Task<IResult> DeleteDocument(Guid id, AutoDbContext db, CancellationToken ct) =>

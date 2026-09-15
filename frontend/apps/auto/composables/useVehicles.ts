@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRuntimeConfig } from '#app'
 import { useApiClient } from '@zelo/ui/composables/useApiClient'
 import type { components } from '@zelo/api-client'
@@ -34,6 +34,13 @@ const DOCUMENT_CATEGORY_FROM_API: Record<ApiDocument['category'], VehicleDocumen
   Registo: 'Registo',
   Fatura: 'Fatura',
 }
+const DOCUMENT_CATEGORY_TO_API: Record<VehicleDocument['category'], ApiDocument['category']> = {
+  Seguro: 'Seguro',
+  'Manutenção': 'Manutencao',
+  'Inspeção': 'Inspecao',
+  Registo: 'Registo',
+  Fatura: 'Fatura',
+}
 function mapVehicleFromApi(dto: ApiVehicle): Vehicle {
   return {
     id: dto.id,
@@ -53,6 +60,7 @@ function mapVehicleFromApi(dto: ApiVehicle): Vehicle {
     insurancePremium: dto.insurancePremium != null ? formatCostValue(Number(dto.insurancePremium)) : '—',
     iucDueDate: fromIso(dto.iucDueDate),
     odometer: formatKmValue(Number(dto.odometer)),
+    photoUrl: dto.photoUrl ?? null,
     maintenances: [],
     documents: [],
     // O endpoint /stats nao devolve consumo medio nem o detalhe mensal -
@@ -88,6 +96,7 @@ function mapDocumentFromApi(dto: ApiDocument): VehicleDocument {
     type: dto.type.toLowerCase() as VehicleDocument['type'],
     date: fromIso(dto.date),
     size: formatBytes(Number(dto.sizeBytes)),
+    downloadUrl: dto.downloadUrl,
   }
 }
 
@@ -96,6 +105,14 @@ const query = ref('')
 const selectedId = ref('')
 const isLoaded = ref(false)
 let loadPromise: Promise<void> | null = null
+
+// Marca por vehicleId (nao pelo tamanho dos arrays de detalhe - esse
+// proxy parte-se assim que algo insere um item antes do fetch real
+// acontecer, ex. addMaintenance). detailPromises tambem deduplica pedidos
+// simultaneos quando varios componentes chamam loadVehicleDetail para o
+// mesmo veiculo em paralelo.
+const detailLoaded = new Set<string>()
+const detailPromises = new Map<string, Promise<void>>()
 
 // Os households do utilizador atual - ja nao ha um ID fixo para toda a
 // app (GET /api/v1/households/me garante que existe sempre pelo menos
@@ -141,15 +158,27 @@ async function loadVehicles(client: ReturnType<typeof useApiClient>) {
 }
 
 async function loadVehicleDetail(client: ReturnType<typeof useApiClient>, vehicle: Vehicle) {
-  if (vehicle.maintenances.length > 0 || vehicle.documents.length > 0) return // ja carregado
+  if (detailLoaded.has(vehicle.id)) return
+  const inFlight = detailPromises.get(vehicle.id)
+  if (inFlight) return inFlight
 
-  const [maintenances, documents] = await Promise.all([
-    client.GET('/api/auto/vehicles/{vehicleId}/maintenances', { params: { path: { vehicleId: vehicle.id } } }),
-    client.GET('/api/auto/vehicles/{vehicleId}/documents', { params: { path: { vehicleId: vehicle.id } } }),
-  ])
+  const promise = (async () => {
+    const [maintenances, documents] = await Promise.all([
+      client.GET('/api/auto/vehicles/{vehicleId}/maintenances', { params: { path: { vehicleId: vehicle.id } } }),
+      client.GET('/api/auto/vehicles/{vehicleId}/documents', { params: { path: { vehicleId: vehicle.id } } }),
+    ])
 
-  vehicle.maintenances = (maintenances.data ?? []).map(mapMaintenanceFromApi)
-  vehicle.documents = (documents.data ?? []).map(mapDocumentFromApi)
+    vehicle.maintenances = (maintenances.data ?? []).map(mapMaintenanceFromApi)
+    vehicle.documents = (documents.data ?? []).map(mapDocumentFromApi)
+    detailLoaded.add(vehicle.id)
+  })()
+
+  detailPromises.set(vehicle.id, promise)
+  try {
+    await promise
+  } finally {
+    detailPromises.delete(vehicle.id)
+  }
 }
 
 export function useVehicles() {
@@ -162,6 +191,12 @@ export function useVehicles() {
   // Forca um novo pedido a API, ignorando o cache do loadPromise - usado
   // depois de uma importacao de veiculos, que nao passa por addVehicle().
   function refresh() {
+    // loadVehicles substitui os objetos Vehicle por novos (mesmos ids,
+    // arrays de detalhe vazios) - sem isto, loadVehicleDetail via
+    // detailLoaded pensava que o detalhe do veiculo ja estava carregado e
+    // nunca voltava a pedir nada, deixando maintenances/documents vazios.
+    detailLoaded.clear()
+    detailPromises.clear()
     loadPromise = loadVehicles(client)
     return loadPromise
   }
@@ -182,9 +217,13 @@ export function useVehicles() {
   // porque os dados vinham sincronos.
   const photo = computed(() => selected.value ? photoFor(selected.value) : '')
 
-  if (selected.value) {
-    void loadVehicleDetail(client, selected.value)
-  }
+  // watch, nao um "if" direto - selected e computed, por isso um if aqui
+  // so corre uma vez, quando o composable e criado, e nunca mais quando o
+  // utilizador troca de veiculo depois (selectedId muda, mas nada volta a
+  // avaliar este bloco).
+  watch(selected, (vehicle) => {
+    if (vehicle) void loadVehicleDetail(client, vehicle)
+  }, { immediate: true })
 
   const visibleGroups = computed(() => {
     const term = query.value.trim().toLowerCase()
@@ -215,9 +254,30 @@ export function useVehicles() {
     return groups.value.find(g => g.items.some(v => v.id === vehicleId))?.label as 'Motociclos' | 'Ligeiros' | undefined
   }
 
+  // A foto (criacao, ou regeneracao ao mudar a cor - ver plano de geracao
+  // automatica) demora dezenas de segundos a gerar no Worker, em
+  // background - o pedido de create/update ja volta sem ela. Em vez de
+  // obrigar a um refresh manual, pergunta-se de vez em quando ate
+  // aparecer (ou desistir). Muta o vehicle.photoUrl diretamente -
+  // groups e reativo, o <img> atualiza sozinho quando chegar.
+  async function pollForPhoto(vehicleId: string, client: ReturnType<typeof useApiClient>) {
+    for (let attempt = 0; attempt < 15; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 4000))
+
+      const vehicle = allVehicles.value.find(v => v.id === vehicleId)
+      if (!vehicle || vehicle.photoUrl) return // saiu da lista, ou ja chegou por outra via
+
+      const { data } = await client.GET('/api/auto/vehicles/{id}', { params: { path: { id: vehicleId } } })
+      if (data?.photoUrl) {
+        vehicle.photoUrl = data.photoUrl
+        return
+      }
+    }
+  }
+
   async function addVehicle(input: VehicleFormInput): Promise<Vehicle> {
     const householdId = await resolveHouseholdId(client)
-    const { data } = await client.POST('/api/auto/vehicles', {
+    const { data, error } = await client.POST('/api/auto/vehicles', {
       params: { query: { householdId } },
       body: {
         category: input.category,
@@ -238,15 +298,17 @@ export function useVehicles() {
         iucDueDate: toIso(input.iucDueDate),
       },
     })
+    if (!data) throw new Error(extractApiErrorMessage(error, 'Não foi possível criar o veículo.'))
 
-    const vehicle = mapVehicleFromApi(data!)
+    const vehicle = mapVehicleFromApi(data)
     const group = groups.value.find(g => g.label === input.category)
     group?.items.push(vehicle)
+    if (!vehicle.photoUrl) void pollForPhoto(vehicle.id, client)
     return vehicle
   }
 
-  async function updateVehicle(vehicleId: string, input: VehicleFormInput): Promise<Vehicle | undefined> {
-    const { data } = await client.PUT('/api/auto/vehicles/{id}', {
+  async function updateVehicle(vehicleId: string, input: VehicleFormInput): Promise<Vehicle> {
+    const { data, error } = await client.PUT('/api/auto/vehicles/{id}', {
       params: { path: { id: vehicleId } },
       body: {
         category: input.category,
@@ -267,7 +329,7 @@ export function useVehicles() {
         iucDueDate: toIso(input.iucDueDate),
       },
     })
-    if (!data) return undefined
+    if (!data) throw new Error(extractApiErrorMessage(error, 'Não foi possível guardar as alterações.'))
 
     const updated = mapVehicleFromApi(data)
     const currentCategory = categoryOf(vehicleId)
@@ -281,6 +343,7 @@ export function useVehicles() {
 
     const toGroup = groups.value.find(g => g.label === input.category)
     toGroup?.items.push(updated)
+    if (!updated.photoUrl) void pollForPhoto(updated.id, client)
     return updated
   }
 
@@ -310,12 +373,53 @@ export function useVehicles() {
     return maintenance
   }
 
-  function addDocument(vehicleId: string, document: VehicleDocument) {
-    // TODO: sem UI de upload ainda - quando existir, chamar
-    // /documents/upload-url, fazer o PUT, e so depois confirmar aqui via
-    // POST /documents com o objectKey devolvido.
+  // Fluxo em 3 pedidos: 1) pede um URL pre-assinado de upload (o backend
+  // gera a objectKey), 2) o browser envia o ficheiro diretamente para o
+  // Garage nesse URL (nunca passa pela nossa Api), 3) confirma o registo
+  // do documento com a objectKey devolvida em 1). O tipo (Pdf/Imagem) sai
+  // do content-type do proprio ficheiro - o input no formulario ja
+  // restringe a pdf/imagem via "accept", por isso qualquer outra coisa
+  // cai em Imagem por omissao (nao deveria acontecer na pratica).
+  async function addDocument(
+    vehicleId: string, file: File, category: VehicleDocument['category'], date: string,
+  ): Promise<VehicleDocument> {
+    const contentType = file.type || 'application/octet-stream'
+    const { data: uploadData, error: uploadError } = await client.POST('/api/auto/vehicles/{vehicleId}/documents/upload-url', {
+      params: { path: { vehicleId } },
+      body: { fileName: file.name, contentType },
+    })
+    const upload = uploadData as { objectKey: string, uploadUrl: string } | undefined
+    if (!upload) throw new Error(extractApiErrorMessage(uploadError, 'Não foi possível preparar o envio do ficheiro.'))
+
+    const putResponse = await fetch(upload.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': contentType } })
+    if (!putResponse.ok) throw new Error('Não foi possível enviar o ficheiro.')
+
+    const { data, error } = await client.POST('/api/auto/vehicles/{vehicleId}/documents', {
+      params: { path: { vehicleId } },
+      body: {
+        objectKey: upload.objectKey,
+        name: file.name,
+        category: DOCUMENT_CATEGORY_TO_API[category],
+        type: contentType === 'application/pdf' ? 'Pdf' : 'Imagem',
+        date: toIso(date) ?? new Date().toISOString().slice(0, 10),
+        sizeBytes: file.size,
+      },
+    })
+    const created = data as ApiDocument | undefined
+    if (!created) throw new Error(extractApiErrorMessage(error, 'Não foi possível registar o documento.'))
+
+    const document = mapDocumentFromApi(created)
     const vehicle = allVehicles.value.find(v => v.id === vehicleId)
     vehicle?.documents.push(document)
+    return document
+  }
+
+  async function deleteDocument(vehicleId: string, documentId: string): Promise<void> {
+    const { error } = await client.DELETE("/api/auto/documents/{id}", { params: { path: { id: documentId } } })
+    if (error) throw new Error(extractApiErrorMessage(error, "Não foi possível eliminar o documento."))
+
+    const vehicle = allVehicles.value.find(v => v.id === vehicleId)
+    if (vehicle) vehicle.documents = vehicle.documents.filter(d => d.id !== documentId)
   }
 
   return {
@@ -343,7 +447,20 @@ export function useVehicles() {
     updateVehicle,
     addMaintenance,
     addDocument,
+    deleteDocument,
   }
+}
+
+// O backend devolve erros de validacao/negocio como { error: "mensagem" }
+// (ver AutoEndpointHandlers, ex. "Matrícula já existe"). Sem schema
+// tipado para respostas de erro, "error" vem como unknown - le-se a
+// mensagem manualmente, com um fallback generico se a forma nao bater
+// certo (ex. erro de rede, sem corpo JSON nenhum).
+function extractApiErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === 'object' && 'error' in error && typeof (error as { error: unknown }).error === 'string') {
+    return (error as { error: string }).error
+  }
+  return fallback
 }
 
 function slugify(value: string) {
@@ -364,9 +481,13 @@ function fullName(vehicle: Vehicle) {
 // browser pedia-o em "/vehicles/..." (raiz do dominio, apanhado pela
 // shell) em vez de "/auto/vehicles/...". Prefixar com o baseURL da app
 // corrige isto nos dois casos (raiz e sub-path).
+// A foto e gerada por veiculo real (nao por entrada de catalogo) e
+// servida pela Api via URL pre-assinada com validade curta - ver
+// VehicleResponse.PhotoUrl e plans/vehicle-image-generation.md. Sem
+// PhotoUrl (geracao ainda a decorrer, ou falhou), VehiclePhoto mostra o
+// placeholder de sempre.
 function photoFor(vehicle: Vehicle) {
-  const baseURL = useRuntimeConfig().app.baseURL
-  return `${baseURL}vehicles/${slugify(fullName(vehicle))}.png`
+  return vehicle.photoUrl ?? ''
 }
 
 function logoFor(vehicle: Vehicle) {

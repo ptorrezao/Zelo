@@ -20,6 +20,11 @@ public static class CoreEndpoints
         group.MapGet("/assets", CoreEndpointHandlers.GetAssets);
         group.MapGet("/obligations", CoreEndpointHandlers.GetObligations);
 
+        group.MapGet("/notifications", CoreEndpointHandlers.GetNotifications);
+        group.MapPost("/notifications/{id:guid}/acknowledge", CoreEndpointHandlers.AcknowledgeNotification);
+        group.MapGet("/notifications/preferences", CoreEndpointHandlers.GetPreferences);
+        group.MapPut("/notifications/preferences", CoreEndpointHandlers.UpdatePreferences);
+
         return app;
     }
 }

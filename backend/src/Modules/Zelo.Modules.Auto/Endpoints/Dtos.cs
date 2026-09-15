@@ -1,4 +1,5 @@
 using Zelo.Modules.Auto.Domain;
+using Zelo.Modules.Auto.Infrastructure;
 
 namespace Zelo.Modules.Auto.Endpoints;
 
@@ -38,12 +39,17 @@ internal sealed record VehicleResponse(
     DateOnly? InsurancePeriodStart,
     DateOnly? InsurancePeriodEnd,
     decimal? InsurancePremium,
-    DateOnly? IucDueDate)
+    DateOnly? IucDueDate,
+    string? PhotoUrl)
 {
-    public static VehicleResponse From(Vehicle v) => new(
+    // storage so serve para resolver a URL de leitura pre-assinada da
+    // foto (ver IObjectStorage.CreateReadUrl) - PhotoObjectKey em si
+    // nunca sai da Api, so a URL temporaria.
+    public static VehicleResponse From(Vehicle v, IObjectStorage storage) => new(
         v.Id, v.Category, v.Brand, v.Model, v.Plate, v.Vin, v.Color, v.Status, v.Driver,
         v.Odometer, v.Registered, v.NextInspection, v.Insurer, v.InsurancePolicyNumber,
-        v.InsurancePeriodStart, v.InsurancePeriodEnd, v.InsurancePremium, v.IucDueDate);
+        v.InsurancePeriodStart, v.InsurancePeriodEnd, v.InsurancePremium, v.IucDueDate,
+        v.PhotoObjectKey is { } key ? storage.CreateReadUrl(key, TimeSpan.FromMinutes(15)).ToString() : null);
 }
 
 internal sealed record MaintenanceItemRequest(string Description, decimal Price, string? SerialNumber);
@@ -100,9 +106,14 @@ internal sealed record DocumentResponse(
     DocumentCategory Category,
     DocumentType Type,
     DateOnly Date,
-    long SizeBytes)
+    long SizeBytes,
+    string DownloadUrl)
 {
-    public static DocumentResponse From(VehicleDocument d) => new(d.Id, d.Name, d.Category, d.Type, d.Date, d.SizeBytes);
+    // Mesmo padrao de VehicleResponse.PhotoUrl - o ObjectKey nunca sai da
+    // Api, so uma URL de leitura pre-assinada e temporaria.
+    public static DocumentResponse From(VehicleDocument d, IObjectStorage storage) => new(
+        d.Id, d.Name, d.Category, d.Type, d.Date, d.SizeBytes,
+        storage.CreateReadUrl(d.ObjectKey, TimeSpan.FromMinutes(15)).ToString());
 }
 
 internal sealed record VehicleStatsResponse(

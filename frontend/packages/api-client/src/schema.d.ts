@@ -894,6 +894,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/core/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query: {
+                    householdId: string;
+                    unacknowledgedOnly?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/core/notifications/{id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query: {
+                    householdId: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/core/notifications/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query: {
+                    householdId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationPreferenceResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query: {
+                    householdId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferenceRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationPreferenceResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auto/vehicles": {
         parameters: {
             query?: never;
@@ -1518,6 +1655,7 @@ export interface components {
             date: string;
             /** Format: int64 */
             sizeBytes: number | string;
+            downloadUrl: string;
         };
         /** @enum {unknown} */
         DocumentType: "Pdf" | "Imagem";
@@ -1650,6 +1788,31 @@ export interface components {
             invoiceDate: null | string;
             items: null | components["schemas"]["MaintenanceItemRequest"][];
         };
+        NotificationPreferenceRequest: {
+            /** Format: int32 */
+            daysWarning: number | string;
+            emailEnabled: boolean;
+        };
+        NotificationPreferenceResponse: {
+            /** Format: int32 */
+            daysWarning: number | string;
+            emailEnabled: boolean;
+        };
+        NotificationResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            obligationId: string;
+            title: string;
+            /** Format: date */
+            dueOn: string;
+            /** Format: int32 */
+            daysUntilDue: number | string;
+            /** Format: date-time */
+            triggeredAt: string;
+            /** Format: date-time */
+            acknowledgedAt: null | string;
+        };
         ObligationResponse: {
             /** Format: uuid */
             id: string;
@@ -1733,6 +1896,7 @@ export interface components {
             insurancePremium: null | number | string;
             /** Format: date */
             iucDueDate: null | string;
+            photoUrl: null | string;
         };
         /** @enum {unknown} */
         VehicleStatus: "Ativo" | "Vendido" | "Abatido";

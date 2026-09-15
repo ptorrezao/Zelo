@@ -1,7 +1,10 @@
 import { ref } from 'vue'
 import { useApiClient } from '@zelo/ui/composables/useApiClient'
 
-export type VehicleCatalog = Record<string, string[]>
+// Categoria ("Ligeiros"/"Motociclos", mesmas chaves usadas no formulario) ->
+// marca -> modelos. Uma marca (BMW, Honda) pode existir nas duas categorias
+// com modelos diferentes.
+export type VehicleCatalog = Record<string, Record<string, string[]>>
 
 // Catalogo de marcas/modelos - vem do backend (GET /api/auto/vehicle-catalog,
 // servido a partir de um JSON embutido no servidor) para ser facil de
@@ -13,7 +16,7 @@ let loadPromise: Promise<void> | null = null
 
 async function load(client: ReturnType<typeof useApiClient>) {
   const { data } = await client.GET('/api/auto/vehicle-catalog')
-  catalog.value = data ?? {}
+  catalog.value = (data ?? {}) as VehicleCatalog
 }
 
 export function useVehicleCatalog() {

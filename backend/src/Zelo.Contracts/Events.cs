@@ -55,3 +55,18 @@ public sealed record HouseholdDeleted(
     DateTimeOffset OccurredAt,
     Guid HouseholdId,
     Guid ReplacementHouseholdId) : IIntegrationEvent;
+
+/// Emitido pelo Core (ObligationReminderCheckService, so no Worker)
+/// quando uma obrigacao pendente entra na janela de aviso do household
+/// (NotificationPreference.DaysWarning) - ver plans/notifications.md.
+/// Consumido pelo proprio Core (ObligationReminderDueHandler), que grava
+/// o NotificationLog e envia o email. Um so lembrete por obrigacao (o
+/// NotificationLog e o gate de idempotencia).
+public sealed record ObligationReminderDue(
+    Guid EventId,
+    DateTimeOffset OccurredAt,
+    Guid ObligationId,
+    Guid HouseholdId,
+    string Title,
+    DateOnly DueOn,
+    int DaysUntilDue) : IIntegrationEvent;

@@ -14,4 +14,20 @@ public interface IHouseholdMembershipChecker
     /// para um agente conseguir descobrir o householdId sem o utilizador
     /// ter de o copiar a mao do browser.
     Task<IReadOnlyList<HouseholdSummary>> GetMyHouseholdsAsync(Guid userId, CancellationToken ct = default);
+
+    /// Cria um household novo com o utilizador como Owner. Lanca
+    /// ArgumentException se o nome for invalido (vazio ou > 200 carateres).
+    Task<HouseholdSummary> CreateHouseholdAsync(Guid userId, string name, CancellationToken ct = default);
+
+    /// Devolve null se o household nao existe ou o utilizador nao e
+    /// membro. Lanca UnauthorizedAccessException se o utilizador e membro
+    /// mas nao Owner (unico que pode renomear), e ArgumentException se o
+    /// nome for invalido.
+    Task<HouseholdSummary?> RenameHouseholdAsync(Guid userId, Guid householdId, string name, CancellationToken ct = default);
+
+    /// Emails de todos os membros do household, para o Core enviar
+    /// notificacoes (ver plans/notifications.md) sem depender dos tipos
+    /// internos do Identity. Lista vazia se o household nao existir ou nao
+    /// tiver membros com email confirmado/definido.
+    Task<IReadOnlyList<string>> GetMemberEmailsAsync(Guid householdId, CancellationToken ct = default);
 }

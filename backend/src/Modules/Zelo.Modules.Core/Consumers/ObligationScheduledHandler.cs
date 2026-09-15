@@ -5,7 +5,8 @@ using Zelo.Modules.Core.Infrastructure;
 
 namespace Zelo.Modules.Core.Consumers;
 
-internal sealed class ObligationScheduledHandler(CoreDbContext db) : IEventHandler<ObligationScheduled>
+internal sealed class ObligationScheduledHandler(
+    CoreDbContext db, IEventPublisher publisher, TimeProvider timeProvider) : IEventHandler<ObligationScheduled>
 {
     public async Task HandleAsync(ObligationScheduled @event, CancellationToken ct)
     {
@@ -23,5 +24,11 @@ internal sealed class ObligationScheduledHandler(CoreDbContext db) : IEventHandl
         });
 
         await db.SaveChangesAsync(ct);
+
+        // Se a obrigacao ja nasce dentro da janela de aviso (ex.: seguro
+        // criado a poucos dias de vencer), nao espera pela proxima corrida
+        // horaria do ObligationReminderCheckService.
+        await ObligationReminderEvaluator.PublishIfDueAsync(
+            db, publisher, timeProvider, @event.ObligationId, @event.HouseholdId, @event.Title, @event.DueOn, ct);
     }
 }

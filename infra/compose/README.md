@@ -47,6 +47,21 @@ compose) — nada manual a fazer. A chave é importada com um valor fixo
 (`/v1/key/import`) em vez de gerada, precisamente para poder ficar
 hardcoded no compose como as outras credenciais de dev.
 
+### Ver os ficheiros guardados (`s3-browser`)
+
+O Garage não tem UI web própria. [garage-webui](https://github.com/khairul169/garage-webui)
+— feito especificamente para o Garage, lê o `admin_token` direto do
+`garage.toml` montado, sem nada a configurar à mão — corre num serviço à
+parte, só quando pedido:
+
+```bash
+docker compose -f infra/compose/docker-compose.yml --profile tools up -d s3-browser
+```
+
+Depois, http://localhost:3909 — sem login, gestão de buckets/chaves e
+navegador de objetos (incluindo pré-visualização de imagens, ex.
+`zelo-documents/vehicles/<id>/photo.png`) já prontos.
+
 ## Mailhog (`mailhog`) — captura de emails
 
 | | |

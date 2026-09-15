@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Zelo.Contracts;
 using Zelo.Modules.Auto.Domain;
 using Zelo.Modules.Auto.Endpoints;
 using Zelo.Modules.Auto.Infrastructure;
@@ -20,14 +21,21 @@ public class AutoEndpointHandlersTests
         new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1), 350.00m, null);
 
     [Fact]
-    public void GetVehicleCatalog_DevolveMarcasEModelosDoJsonEmbutido()
+    public void GetVehicleCatalog_DevolveMarcasEModelosPorCategoria()
     {
         var result = AutoEndpointHandlers.GetVehicleCatalog();
 
-        var ok = Assert.IsType<Ok<IReadOnlyDictionary<string, string[]>>>(result);
+        var ok = Assert.IsType<Ok<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string[]>>>>(result);
         Assert.True(ok.Value!.Count > 0);
-        Assert.Contains("Toyota", ok.Value.Keys);
-        Assert.Contains("Corolla", ok.Value["Toyota"]);
+        Assert.Contains("Ligeiros", ok.Value.Keys);
+        Assert.Contains("Toyota", ok.Value["Ligeiros"].Keys);
+        Assert.Contains("Corolla", ok.Value["Ligeiros"]["Toyota"]);
+        // BMW e Honda tem modelos diferentes em cada categoria - a mesma
+        // marca nao pode sugerir motas quando a categoria escolhida e
+        // Ligeiros, nem o contrario.
+        Assert.Contains("Motociclos", ok.Value.Keys);
+        Assert.Contains("R1250GS", ok.Value["Motociclos"]["BMW"]);
+        Assert.DoesNotContain("R1250GS", ok.Value["Ligeiros"]["BMW"]);
     }
 
     [Fact]
@@ -37,7 +45,7 @@ public class AutoEndpointHandlersTests
         var events = new FakeEventPublisher();
         var householdId = Guid.NewGuid();
 
-        var result = await AutoEndpointHandlers.CreateVehicle(householdId, NewVehicleRequest(), db, events, CancellationToken.None);
+        var result = await AutoEndpointHandlers.CreateVehicle(householdId, NewVehicleRequest(), db, events, new FakeObjectStorage(), CancellationToken.None);
 
         var created = Assert.IsType<Created<VehicleResponse>>(result);
         Assert.Equal("Toyota", created.Value!.Brand);
@@ -45,7 +53,8 @@ public class AutoEndpointHandlersTests
         Assert.Equal("AP-12345", created.Value.InsurancePolicyNumber);
         Assert.Equal(350.00m, created.Value.InsurancePremium);
         Assert.Equal(1, await db.Vehicles.CountAsync());
-        Assert.Single(events.Published);
+        // AssetCreated + ObligationScheduled (seguro, InsurancePeriodEnd preenchido no pedido).
+        Assert.Equal(2, events.Published.Count);
     }
 
     [Fact]
@@ -54,14 +63,38 @@ public class AutoEndpointHandlersTests
         await using var db = NewDb();
         var events = new FakeEventPublisher();
         var vehicle = NewVehicle(Guid.NewGuid(), "Toyota", "Corolla");
+        vehicle.Color = "Branco";
+        vehicle.PhotoObjectKey = "vehicles/x/photo.png"; // gerada na criacao, para a cor antiga
         db.Vehicles.Add(vehicle);
         await db.SaveChangesAsync();
         var request = NewVehicleRequest() with { Color = "Azul" };
 
-        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, CancellationToken.None);
+        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, new FakeObjectStorage(), CancellationToken.None);
 
         var ok = Assert.IsType<Ok<VehicleResponse>>(result);
         Assert.Equal("Azul", ok.Value!.Color);
+        // A foto gerada e para a cor antiga - apaga a referencia e volta a
+        // publicar AssetCreated para o VehiclePhotoHandler gerar de novo.
+        Assert.Null((await db.Vehicles.FindAsync(vehicle.Id))!.PhotoObjectKey);
+        Assert.Contains(events.Published, e => e is AssetCreated created && created.AssetId == vehicle.Id);
+    }
+
+    [Fact]
+    public async Task UpdateVehicle_CorInalterada_NaoRepublicaAssetCreated()
+    {
+        await using var db = NewDb();
+        var events = new FakeEventPublisher();
+        var vehicle = NewVehicle(Guid.NewGuid(), "Toyota", "Corolla");
+        vehicle.Color = "Branco";
+        vehicle.PhotoObjectKey = "vehicles/x/photo.png";
+        db.Vehicles.Add(vehicle);
+        await db.SaveChangesAsync();
+        var request = NewVehicleRequest() with { Color = "Branco", Odometer = 20_000 };
+
+        await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, new FakeObjectStorage(), CancellationToken.None);
+
+        Assert.Equal("vehicles/x/photo.png", (await db.Vehicles.FindAsync(vehicle.Id))!.PhotoObjectKey);
+        Assert.DoesNotContain(events.Published, e => e is AssetCreated);
     }
 
     [Fact]
@@ -71,11 +104,13 @@ public class AutoEndpointHandlersTests
         var events = new FakeEventPublisher();
         var request = NewVehicleRequest() with { NextInspection = new DateOnly(2027, 6, 1) };
 
-        await AutoEndpointHandlers.CreateVehicle(Guid.NewGuid(), request, db, events, CancellationToken.None);
+        await AutoEndpointHandlers.CreateVehicle(Guid.NewGuid(), request, db, events, new FakeObjectStorage(), CancellationToken.None);
 
-        Assert.Equal(2, events.Published.Count);
+        // AssetCreated + ObligationScheduled (inspecao) + ObligationScheduled (seguro).
+        Assert.Equal(3, events.Published.Count);
         var vehicle = await db.Vehicles.FirstAsync();
         Assert.NotNull(vehicle.InspectionObligationId);
+        Assert.NotNull(vehicle.InsuranceObligationId);
     }
 
     [Fact]
@@ -90,7 +125,7 @@ public class AutoEndpointHandlersTests
             NewVehicle(outro, "BMW", "X1"));
         await db.SaveChangesAsync();
 
-        var result = await AutoEndpointHandlers.GetVehicles(household, db, CancellationToken.None);
+        var result = await AutoEndpointHandlers.GetVehicles(household, db, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.Equal(2, result.Count);
         Assert.Equal("Audi", result[0].Brand);
@@ -102,7 +137,7 @@ public class AutoEndpointHandlersTests
     {
         await using var db = NewDb();
 
-        var result = await AutoEndpointHandlers.GetVehicle(Guid.NewGuid(), db, CancellationToken.None);
+        var result = await AutoEndpointHandlers.GetVehicle(Guid.NewGuid(), db, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.IsType<NotFound>(result);
     }
@@ -117,7 +152,7 @@ public class AutoEndpointHandlersTests
         await db.SaveChangesAsync();
         var request = NewVehicleRequest() with { Odometer = 55_000 };
 
-        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, CancellationToken.None);
+        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, new FakeObjectStorage(), CancellationToken.None);
 
         var ok = Assert.IsType<Ok<VehicleResponse>>(result);
         Assert.Equal(55_000, ok.Value!.Odometer);
@@ -130,9 +165,39 @@ public class AutoEndpointHandlersTests
         await using var db = NewDb();
         var events = new FakeEventPublisher();
 
-        var result = await AutoEndpointHandlers.UpdateVehicle(Guid.NewGuid(), NewVehicleRequest(), db, events, CancellationToken.None);
+        var result = await AutoEndpointHandlers.UpdateVehicle(Guid.NewGuid(), NewVehicleRequest(), db, events, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.IsType<NotFound>(result);
+    }
+
+    [Fact]
+    public async Task CreateVehicle_SemCor_DevolveBadRequestSemGuardarNada()
+    {
+        await using var db = NewDb();
+        var events = new FakeEventPublisher();
+        var request = NewVehicleRequest() with { Color = null };
+
+        var result = await AutoEndpointHandlers.CreateVehicle(Guid.NewGuid(), request, db, events, new FakeObjectStorage(), CancellationToken.None);
+
+        Assert.Contains("Cor", GetErrorMessage(result));
+        Assert.Equal(0, await db.Vehicles.CountAsync());
+        Assert.Empty(events.Published);
+    }
+
+    [Fact]
+    public async Task UpdateVehicle_QuilometragemNegativa_DevolveBadRequestSemAlterarNada()
+    {
+        await using var db = NewDb();
+        var events = new FakeEventPublisher();
+        var vehicle = NewVehicle(Guid.NewGuid(), "Toyota", "Corolla");
+        db.Vehicles.Add(vehicle);
+        await db.SaveChangesAsync();
+        var request = NewVehicleRequest() with { Odometer = -1 };
+
+        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, new FakeObjectStorage(), CancellationToken.None);
+
+        Assert.Contains("Quilometragem", GetErrorMessage(result));
+        Assert.Equal(0, (await db.Vehicles.FindAsync(vehicle.Id))!.Odometer); // NewVehicle por omissao
     }
 
     [Fact]
@@ -238,7 +303,7 @@ public class AutoEndpointHandlersTests
     {
         await using var db = NewDb();
 
-        var result = await AutoEndpointHandlers.CreateDocument(Guid.NewGuid(), NewDocumentRequest(), db, CancellationToken.None);
+        var result = await AutoEndpointHandlers.CreateDocument(Guid.NewGuid(), NewDocumentRequest(), db, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.IsType<NotFound>(result);
     }
@@ -251,7 +316,7 @@ public class AutoEndpointHandlersTests
         db.Vehicles.Add(vehicle);
         await db.SaveChangesAsync();
 
-        var result = await AutoEndpointHandlers.CreateDocument(vehicle.Id, NewDocumentRequest(), db, CancellationToken.None);
+        var result = await AutoEndpointHandlers.CreateDocument(vehicle.Id, NewDocumentRequest(), db, new FakeObjectStorage(), CancellationToken.None);
 
         var created = Assert.IsType<Created<DocumentResponse>>(result);
         Assert.Equal("Apolice.pdf", created.Value!.Name);
@@ -267,8 +332,8 @@ public class AutoEndpointHandlersTests
             NewDocument(vehicleId, DocumentCategory.Manutencao));
         await db.SaveChangesAsync();
 
-        var onlyInsurance = await AutoEndpointHandlers.GetDocuments(vehicleId, DocumentCategory.Seguro, db, CancellationToken.None);
-        var all = await AutoEndpointHandlers.GetDocuments(vehicleId, null, db, CancellationToken.None);
+        var onlyInsurance = await AutoEndpointHandlers.GetDocuments(vehicleId, DocumentCategory.Seguro, db, new FakeObjectStorage(), CancellationToken.None);
+        var all = await AutoEndpointHandlers.GetDocuments(vehicleId, null, db, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.Single(onlyInsurance);
         Assert.Equal(2, all.Count);
@@ -336,6 +401,22 @@ public class AutoEndpointHandlersTests
     private static ClaimsPrincipal CallerWithEmail(string email) =>
         new(new ClaimsIdentity([new Claim(ClaimTypes.Email, email)]));
 
+    /// PreviewImport agora precisa de um HttpContext para comparar o host do
+    /// pedido com o do ambiente remoto resolvido (ver
+    /// plans/fix-cross-environment-import-false-self-block.md).
+    private static HttpContext HttpContextWithHost(string host)
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Host = new HostString(host);
+        return ctx;
+    }
+
+    private static string GetErrorMessage(IResult result)
+    {
+        var value = Assert.IsAssignableFrom<IValueHttpResult>(result);
+        return (string)value.Value!.GetType().GetProperty("error")!.GetValue(value.Value)!;
+    }
+
     [Fact]
     public async Task PreviewImport_MarcaVeiculosComMatriculaJaExistenteComoAlreadyExists()
     {
@@ -350,7 +431,8 @@ public class AutoEndpointHandlersTests
         var request = new ImportConnectRequest("https://origem.exemplo", "user@origem.com", "pwd", Guid.NewGuid());
 
         var result = await AutoEndpointHandlers.PreviewImport(
-            destino, request, CallerWithEmail("destino@exemplo.com"), db, remoteClient, CancellationToken.None);
+            destino, request, CallerWithEmail("destino@exemplo.com"),
+            HttpContextWithHost("destino.exemplo"), db, remoteClient, CancellationToken.None);
 
         var ok = Assert.IsType<Ok<ImportPreviewResponse>>(result);
         Assert.Equal(ImportPreviewStatus.VehiclesReady, ok.Value!.Status);
@@ -369,7 +451,8 @@ public class AutoEndpointHandlersTests
         var request = new ImportConnectRequest("https://origem.exemplo", "user@origem.com", "pwd", null);
 
         var result = await AutoEndpointHandlers.PreviewImport(
-            Guid.NewGuid(), request, CallerWithEmail("destino@exemplo.com"), db, remoteClient, CancellationToken.None);
+            Guid.NewGuid(), request, CallerWithEmail("destino@exemplo.com"),
+            HttpContextWithHost("destino.exemplo"), db, remoteClient, CancellationToken.None);
 
         var ok = Assert.IsType<Ok<ImportPreviewResponse>>(result);
         Assert.Equal(ImportPreviewStatus.ChooseHousehold, ok.Value!.Status);
@@ -388,27 +471,49 @@ public class AutoEndpointHandlersTests
         var request = new ImportConnectRequest("https://origem.exemplo", "user@origem.com", "pwd", Guid.NewGuid());
 
         var result = await AutoEndpointHandlers.PreviewImport(
-            Guid.NewGuid(), request, CallerWithEmail("destino@exemplo.com"), db, remoteClient, CancellationToken.None);
+            Guid.NewGuid(), request, CallerWithEmail("destino@exemplo.com"),
+            HttpContextWithHost("destino.exemplo"), db, remoteClient, CancellationToken.None);
 
         var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
         Assert.Equal(400, statusResult.StatusCode);
     }
 
     [Fact]
-    public async Task PreviewImport_MesmoEmailDoUtilizadorAtual_BloqueiaSemChamarORemoto()
+    public async Task PreviewImport_MesmoEmailEMesmoHost_BloqueiaAntesDoLogin()
     {
         await using var db = NewDb();
-        var remoteClient = new FakeImportRemoteClient
-        {
-            FailWith = new ImportRemoteException("nao devia chegar a ser chamado"),
-        };
+        // ResolveApiBaseAsync (fake) faz eco do BaseUrl - mesmo host que o
+        // pedido esta a chegar => e garantidamente o proprio ambiente.
+        var remoteClient = new FakeImportRemoteClient();
         var request = new ImportConnectRequest("https://origem.exemplo", "eu@exemplo.com", "pwd", Guid.NewGuid());
 
         var result = await AutoEndpointHandlers.PreviewImport(
-            Guid.NewGuid(), request, CallerWithEmail("eu@exemplo.com"), db, remoteClient, CancellationToken.None);
+            Guid.NewGuid(), request, CallerWithEmail("eu@exemplo.com"),
+            HttpContextWithHost("origem.exemplo"), db, remoteClient, CancellationToken.None);
 
-        var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
-        Assert.Equal(400, statusResult.StatusCode);
+        Assert.Contains("si mesmo", GetErrorMessage(result));
+    }
+
+    [Fact]
+    public async Task PreviewImport_MesmoEmailMasHostDiferente_NaoBloqueiaSeguePorLogin()
+    {
+        await using var db = NewDb();
+        // Mesmo email de login dos dois lados, mas ambientes (hosts)
+        // diferentes - caso normal de importacao entre ambientes, nao deve
+        // bloquear (ver plans/fix-cross-environment-import-false-self-block.md).
+        var remoteClient = new FakeImportRemoteClient
+        {
+            Households = [new ImportHouseholdOption(Guid.NewGuid(), "Casa 1")],
+            Vehicles = [NewCandidate("CC-11-DD")],
+        };
+        var request = new ImportConnectRequest("https://origem.exemplo", "eu@exemplo.com", "pwd", null);
+
+        var result = await AutoEndpointHandlers.PreviewImport(
+            Guid.NewGuid(), request, CallerWithEmail("eu@exemplo.com"),
+            HttpContextWithHost("destino.exemplo"), db, remoteClient, CancellationToken.None);
+
+        var ok = Assert.IsType<Ok<ImportPreviewResponse>>(result);
+        Assert.Equal(ImportPreviewStatus.VehiclesReady, ok.Value!.Status);
     }
 
     [Fact]
@@ -431,6 +536,29 @@ public class AutoEndpointHandlersTests
         Assert.Equal(1, ok.Value!.ImportedCount);
         Assert.Equal(2, ok.Value.SkippedCount);
         Assert.Equal(2, await db.Vehicles.CountAsync(v => v.HouseholdId == destino));
+    }
+
+    [Fact]
+    public async Task ConfirmImport_CandidatoInvalido_MarcaFalhaSemPararOLote()
+    {
+        await using var db = NewDb();
+        var events = new FakeEventPublisher();
+        var destino = Guid.NewGuid();
+        var request = new ImportConfirmRequest([
+            NewCandidate("AA-00-BB") with { Color = null }, // invalido - sem cor
+            NewCandidate("CC-11-DD"), // valido, nao pode ser afetado pelo anterior
+        ]);
+
+        var result = await AutoEndpointHandlers.ConfirmImport(destino, request, db, events, CancellationToken.None);
+
+        var ok = Assert.IsType<Ok<ImportConfirmResponse>>(result);
+        Assert.Equal(1, ok.Value!.ImportedCount);
+        Assert.Equal(1, ok.Value.SkippedCount);
+        var failed = ok.Value.Items.Single(r => r.Plate == "AA-00-BB");
+        Assert.False(failed.Imported);
+        Assert.Contains("Cor", failed.SkipReason);
+        Assert.True(ok.Value.Items.Single(r => r.Plate == "CC-11-DD").Imported);
+        Assert.Equal(1, await db.Vehicles.CountAsync(v => v.HouseholdId == destino));
     }
 
     private static Vehicle NewVehicle(Guid householdId, string brand, string model) => new()

@@ -60,6 +60,54 @@ namespace Zelo.Modules.Core.Infrastructure.Migrations
                     b.ToTable("assets", "core");
                 });
 
+            modelBuilder.Entity("Zelo.Modules.Core.Domain.NotificationLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AcknowledgedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DaysUntilDue")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ObligationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("TriggeredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ObligationId")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId", "AcknowledgedAt");
+
+                    b.ToTable("notification_logs", "core");
+                });
+
+            modelBuilder.Entity("Zelo.Modules.Core.Domain.NotificationPreference", b =>
+                {
+                    b.Property<Guid>("HouseholdId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DaysWarning")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("EmailEnabled")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("HouseholdId");
+
+                    b.ToTable("notification_preferences", "core");
+                });
+
             modelBuilder.Entity("Zelo.Modules.Core.Domain.Obligation", b =>
                 {
                     b.Property<Guid>("Id")

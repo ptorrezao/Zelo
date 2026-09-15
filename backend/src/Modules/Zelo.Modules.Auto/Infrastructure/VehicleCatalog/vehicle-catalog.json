@@ -1,21 +1,27 @@
 {
-  "Audi": ["A1", "A3", "A4", "Q3"],
-  "BMW": ["Serie 1", "Serie 3", "X1", "R1250GS"],
-  "Citroën": ["C3", "C4", "Berlingo"],
-  "Dacia": ["Sandero", "Duster", "Spring"],
-  "Fiat": ["500", "Panda", "Tipo"],
-  "Ford": ["Fiesta", "Focus", "Puma", "Kuga"],
-  "Honda": ["Civic", "CR-V", "CB500F", "PCX125"],
-  "Hyundai": ["i20", "Tucson", "Kona"],
-  "Kia": ["Picanto", "Sportage", "Niro"],
-  "Mercedes-Benz": ["Classe A", "Classe C", "GLA"],
-  "Nissan": ["Micra", "Qashqai", "Juke"],
-  "Opel": ["Corsa", "Astra", "Mokka"],
-  "Peugeot": ["208", "2008", "308", "3008"],
-  "Renault": ["Clio", "Captur", "Megane"],
-  "Seat": ["Ateca", "Leon", "Ibiza", "Arona"],
-  "Smart": ["ForTwo", "ForFour"],
-  "Toyota": ["Corolla", "Yaris", "RAV4"],
-  "Volkswagen": ["Golf", "Polo", "T-Roc", "Tiguan"],
-  "Yamaha": ["Tenere", "MT-07", "MT-09", "XSR700"]
+  "Ligeiros": {
+    "Audi": ["A1", "A3", "A4", "Q3"],
+    "BMW": ["Serie 1", "Serie 3", "X1"],
+    "Citroën": ["C3", "C4", "Berlingo"],
+    "Dacia": ["Sandero", "Duster", "Spring"],
+    "Fiat": ["500", "Panda", "Tipo"],
+    "Ford": ["Fiesta", "Focus", "Puma", "Kuga"],
+    "Honda": ["Civic", "CR-V"],
+    "Hyundai": ["i20", "Tucson", "Kona"],
+    "Kia": ["Picanto", "Sportage", "Niro"],
+    "Mercedes-Benz": ["Classe A", "Classe C", "GLA"],
+    "Nissan": ["Micra", "Qashqai", "Juke"],
+    "Opel": ["Corsa", "Astra", "Mokka"],
+    "Peugeot": ["208", "2008", "308", "3008"],
+    "Renault": ["Clio", "Captur", "Megane"],
+    "Seat": ["Ateca", "Leon", "Ibiza", "Arona"],
+    "Smart": ["ForTwo", "ForFour"],
+    "Toyota": ["Corolla", "Yaris", "RAV4"],
+    "Volkswagen": ["Golf", "Polo", "T-Roc", "Tiguan"]
+  },
+  "Motociclos": {
+    "BMW": ["R1250GS"],
+    "Honda": ["CB500F", "PCX125"],
+    "Yamaha": ["Tenere", "MT-07", "MT-09", "XSR700"]
+  }
 }

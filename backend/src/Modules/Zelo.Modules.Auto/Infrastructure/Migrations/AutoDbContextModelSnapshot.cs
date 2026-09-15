@@ -132,6 +132,9 @@ namespace Zelo.Modules.Auto.Infrastructure.Migrations
                     b.Property<Guid?>("InspectionObligationId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("InsuranceObligationId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateOnly?>("InsurancePeriodEnd")
                         .HasColumnType("date");
 
@@ -163,6 +166,10 @@ namespace Zelo.Modules.Auto.Infrastructure.Migrations
 
                     b.Property<int>("Odometer")
                         .HasColumnType("integer");
+
+                    b.Property<string>("PhotoObjectKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Plate")
                         .IsRequired()

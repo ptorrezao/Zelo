@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useHousehold } from '../composables/useHousehold'
 import { useApiKeys } from '../composables/useApiKeys'
+import { useNotifications } from '@zelo/ui/composables/useNotifications'
 import { useCurrentUser } from '@zelo/ui/composables/useCurrentUser'
 import Avatar from '@zelo/ui/components/ui/Avatar.vue'
 import Button from '@zelo/ui/components/ui/Button.vue'
@@ -164,6 +165,44 @@ async function confirmRevokeApiKey(id: string) {
     apiKeyErrorMessage.value = err instanceof Error ? err.message : 'Não foi possível revogar a chave.'
   } finally {
     isSavingApiKey.value = false
+  }
+}
+
+// Preferencias de notificacao - so do household "primario" (o mesmo que
+// useNotifications resolve para o sino), mesma simplificacao ja usada em
+// toda a app para quem tem varios households.
+const { loadPreferences, savePreferences } = useNotifications()
+const daysWarning = ref(15)
+const emailEnabled = ref(true)
+const isLoadingPreferences = ref(true)
+const isSavingPreferences = ref(false)
+const preferencesSaved = ref(false)
+const preferencesError = ref('')
+
+onMounted(async () => {
+  try {
+    const preferences = await loadPreferences()
+    if (preferences) {
+      daysWarning.value = Number(preferences.daysWarning)
+      emailEnabled.value = preferences.emailEnabled
+    }
+  } finally {
+    isLoadingPreferences.value = false
+  }
+})
+
+async function saveNotificationPreferences() {
+  isSavingPreferences.value = true
+  preferencesError.value = ''
+  preferencesSaved.value = false
+  try {
+    await savePreferences({ daysWarning: daysWarning.value, emailEnabled: emailEnabled.value })
+    preferencesSaved.value = true
+    setTimeout(() => (preferencesSaved.value = false), 2000)
+  } catch (err) {
+    preferencesError.value = err instanceof Error ? err.message : 'Não foi possível guardar as preferências.'
+  } finally {
+    isSavingPreferences.value = false
   }
 }
 
@@ -367,6 +406,39 @@ function formatDate(iso: string | null | undefined): string {
             </div>
           </template>
           <Button v-else size="sm" variant="outline" @click="isAddingApiKey = true">+ Nova chave de API</Button>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Notificações</CardTitle>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-4">
+          <p class="text-sm text-muted-foreground">
+            Lembretes por email de obrigações a vencer (seguro, inspeção), enviados uma vez por obrigação.
+          </p>
+
+          <p v-if="preferencesError" class="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+            {{ preferencesError }}
+          </p>
+
+          <template v-if="!isLoadingPreferences">
+            <div class="flex flex-col gap-1">
+              <label for="days-warning" class="text-xs font-semibold uppercase text-muted-foreground">Avisar com quantos dias de antecedência</label>
+              <input id="days-warning" v-model.number="daysWarning" type="number" min="1" max="90" class="h-10 w-24 rounded-md border border-input bg-background px-3 py-2 text-sm">
+            </div>
+
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="emailEnabled" type="checkbox" class="h-4 w-4">
+              Receber por email
+            </label>
+
+            <div class="flex items-center gap-2">
+              <Button size="sm" :disabled="isSavingPreferences" @click="saveNotificationPreferences">
+                {{ isSavingPreferences ? 'A guardar...' : 'Guardar' }}
+              </Button>
+              <span v-if="preferencesSaved" class="text-xs text-muted-foreground">Guardado.</span>
+            </div>
+          </template>
         </CardContent>
       </Card>
     </div>

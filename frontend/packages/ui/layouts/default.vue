@@ -20,6 +20,7 @@ import SidebarMenu from '../components/ui/SidebarMenu.vue'
 import SidebarMenuItem from '../components/ui/SidebarMenuItem.vue'
 import SidebarMenuButton from '../components/ui/SidebarMenuButton.vue'
 import SidebarTrigger from '../components/ui/SidebarTrigger.vue'
+import NotificationBell from '../components/NotificationBell.vue'
 
 const route = useRoute()
 const config = useRuntimeConfig()

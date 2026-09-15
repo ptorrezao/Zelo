@@ -128,24 +128,23 @@ services:
       - "3901:3901" # RPC (cluster, sem uso num nó unico)
       - "3903:3903" # admin API
 
-  # So para desenvolvimento local: UI web para navegar o bucket do
-  # Garage (que nao tem UI propria). Filestash proxia tudo ele mesmo -
-  # o browser so fala com este container (localhost:8334), nunca
-  # diretamente com o Garage, por isso nao ha problema de host partilhado
-  # entre container/Windows (ao contrario do que aconteceria com URLs
-  # pre-assinadas geradas por uma CLI). Nao arranca com
-  # "docker compose up -d" sozinho (profile dedicado) - so quando pedido,
-  # com "docker compose --profile tools up -d s3-browser". Primeira vez:
-  # abrir http://localhost:8334, criar conta de admin local, e ligar um
-  # backend "S3" com Endpoint=http://garage:3900, path style ativado, e
-  # as credenciais de Storage__AccessKey/SecretKey (ver README.md).
+  # So para desenvolvimento local: UI web feita especificamente para o
+  # Garage (le o admin_token direto do garage.toml, sem precisar de
+  # configurar nada a mao) - lista/gere buckets, chaves, e navega os
+  # objetos dentro deles. Nao arranca com "docker compose up -d" sozinho
+  # (profile dedicado) - so quando pedido, com
+  # "docker compose --profile tools up -d s3-browser". Depois, abrir
+  # http://localhost:3909.
   s3-browser:
-    image: machines/filestash:latest
+    image: khairul169/garage-webui:latest
     profiles: ["tools"]
-    ports:
-      - "8334:8334"
     volumes:
-      - s3browserdata:/app/data/state
+      - ../docker/garage/garage.toml:/etc/garage.toml:ro
+    environment:
+      API_BASE_URL: "http://garage:3903"
+      S3_ENDPOINT_URL: "http://garage:3900"
+    ports:
+      - "3909:3909"
     depends_on:
       garage: { condition: service_started }
 
@@ -195,4 +194,3 @@ volumes:
   garagemeta:
   garagedata:
   unleashdbdata:
-  s3browserdata: # conta de admin/ligacoes do Filestash (ver s3-browser)

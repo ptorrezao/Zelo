@@ -49,25 +49,18 @@ hardcoded no compose como as outras credenciais de dev.
 
 ### Ver os ficheiros guardados (`s3-browser`)
 
-O Garage não tem UI web própria. [Filestash](https://www.filestash.app/)
-(cliente web genérico de storage, fala S3 com endpoint custom) dá uma UI
-a correr num serviço à parte — só arranca quando pedido:
+O Garage não tem UI web própria. [garage-webui](https://github.com/khairul169/garage-webui)
+— feito especificamente para o Garage, lê o `admin_token` direto do
+`garage.toml` montado, sem nada a configurar à mão — corre num serviço à
+parte, só quando pedido:
 
 ```bash
 docker compose -f infra/compose/docker-compose.yml --profile tools up -d s3-browser
 ```
 
-Primeira vez, em http://localhost:8334:
-
-1. Cria a conta de admin local (é só deste Filestash, fica gravada no
-   volume `s3browserdata` — nada a ver com o Garage).
-2. "New Storage" → **S3**, com:
-   - Endpoint: `http://garage:3900`
-   - Access Key / Secret Key: os `Storage__AccessKey` / `Storage__SecretKey`
-     de dev (ver tabela do Garage acima)
-   - Path style: ativado (o Garage exige)
-3. Abre o bucket `zelo-documents` — dá para navegar pastas, pré-visualizar
-   imagens (ex. `vehicles/<id>/photo.png`) e fazer download, tudo na UI.
+Depois, http://localhost:3909 — sem login, gestão de buckets/chaves e
+navegador de objetos (incluindo pré-visualização de imagens, ex.
+`zelo-documents/vehicles/<id>/photo.png`) já prontos.
 
 `infra/compose/s3-downloads/` é só um scratch local (git-ignored) — pode
 ser apagado a qualquer momento.

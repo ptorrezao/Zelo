@@ -96,6 +96,17 @@ internal static class AutoEndpointHandlers
         if (vehicle is null)
             return null;
 
+        // Mudar a cor torna a foto gerada (presa a cor da criacao) errada -
+        // apaga a referencia e volta a publicar AssetCreated para o
+        // VehiclePhotoHandler gerar de novo. Os dois consumidores deste
+        // evento sao idempotentes por AssetId (ver AssetCreatedHandler no
+        // Core, e o guard "ja tem foto" no VehiclePhotoHandler), por isso
+        // reusar o mesmo evento em vez de um VehicleUpdated proprio e seguro.
+        // ponytail: nao apaga o objecto antigo no Garage (fica orfao) -
+        // limpar isso exigiria acompanhar a expiracao do bucket, sem valor
+        // imediato aqui.
+        var colorChanged = !string.Equals(vehicle.Color, request.Color, StringComparison.Ordinal);
+
         vehicle.Category = request.Category;
         vehicle.Brand = request.Brand;
         vehicle.Model = request.Model;
@@ -112,12 +123,16 @@ internal static class AutoEndpointHandlers
         vehicle.InsurancePeriodEnd = request.InsurancePeriodEnd;
         vehicle.InsurancePremium = request.InsurancePremium;
         vehicle.IucDueDate = request.IucDueDate;
+        if (colorChanged)
+            vehicle.PhotoObjectKey = null;
 
         var obligationEvent = VehicleEvents.SyncInspectionObligation(vehicle);
         await db.SaveChangesAsync(ct);
 
         if (obligationEvent is not null)
             await PublishObligationEventAsync(events, obligationEvent, ct);
+        if (colorChanged)
+            await events.PublishAsync(VehicleEvents.Created(vehicle), ct);
 
         return vehicle;
     }

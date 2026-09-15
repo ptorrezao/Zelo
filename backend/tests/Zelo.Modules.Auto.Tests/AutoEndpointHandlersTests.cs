@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Zelo.Contracts;
 using Zelo.Modules.Auto.Domain;
 using Zelo.Modules.Auto.Endpoints;
 using Zelo.Modules.Auto.Infrastructure;
@@ -54,6 +55,8 @@ public class AutoEndpointHandlersTests
         await using var db = NewDb();
         var events = new FakeEventPublisher();
         var vehicle = NewVehicle(Guid.NewGuid(), "Toyota", "Corolla");
+        vehicle.Color = "Branco";
+        vehicle.PhotoObjectKey = "vehicles/x/photo.png"; // gerada na criacao, para a cor antiga
         db.Vehicles.Add(vehicle);
         await db.SaveChangesAsync();
         var request = NewVehicleRequest() with { Color = "Azul" };
@@ -62,6 +65,28 @@ public class AutoEndpointHandlersTests
 
         var ok = Assert.IsType<Ok<VehicleResponse>>(result);
         Assert.Equal("Azul", ok.Value!.Color);
+        // A foto gerada e para a cor antiga - apaga a referencia e volta a
+        // publicar AssetCreated para o VehiclePhotoHandler gerar de novo.
+        Assert.Null((await db.Vehicles.FindAsync(vehicle.Id))!.PhotoObjectKey);
+        Assert.Contains(events.Published, e => e is AssetCreated created && created.AssetId == vehicle.Id);
+    }
+
+    [Fact]
+    public async Task UpdateVehicle_CorInalterada_NaoRepublicaAssetCreated()
+    {
+        await using var db = NewDb();
+        var events = new FakeEventPublisher();
+        var vehicle = NewVehicle(Guid.NewGuid(), "Toyota", "Corolla");
+        vehicle.Color = "Branco";
+        vehicle.PhotoObjectKey = "vehicles/x/photo.png";
+        db.Vehicles.Add(vehicle);
+        await db.SaveChangesAsync();
+        var request = NewVehicleRequest() with { Color = "Branco", Odometer = 20_000 };
+
+        await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, new FakeObjectStorage(), CancellationToken.None);
+
+        Assert.Equal("vehicles/x/photo.png", (await db.Vehicles.FindAsync(vehicle.Id))!.PhotoObjectKey);
+        Assert.DoesNotContain(events.Published, e => e is AssetCreated);
     }
 
     [Fact]

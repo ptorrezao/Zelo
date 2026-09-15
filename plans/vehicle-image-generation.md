@@ -293,10 +293,12 @@ revisão).
   automaticamente. Precisaria de um script/endpoint de execução única
   que republicasse `AssetCreated` (ou chamasse o gerador diretamente)
   para cada veículo sem `PhotoObjectKey`.
-- **Regenerar ao mudar de cor**: `UpdateVehicle` não reage a mudanças
-  de `Color` nesta versão — a foto gerada na criação fica, mesmo que a
-  cor mude depois. Prático de acrescentar mais tarde (comparar
-  `Color` antigo/novo em `UpdateVehicleEntityAsync` e voltar a gerar).
+- ~~Regenerar ao mudar de cor~~ — **implementado**: 
+  `UpdateVehicleEntityAsync` compara `Color` antigo/novo; se mudar,
+  apaga `PhotoObjectKey` e republica `AssetCreated` (idempotente nos
+  dois consumidores existentes) para o `VehiclePhotoHandler` gerar de
+  novo. Não apaga o objeto antigo no Garage (fica órfão) — sem valor
+  imediato em resolver isso agora.
 - **Logótipos de marca** — fonte real, não IA; mecanismo de consumo de
   evento pode ser o mesmo (`AssetCreated`, ou melhor, o próprio
   `VehiclePhotoHandler` também trata da marca se ainda não tiver

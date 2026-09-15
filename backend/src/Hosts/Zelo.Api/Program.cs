@@ -49,6 +49,7 @@ app.UseAuthorization();
 app.MapIdentityEndpoints();
 app.MapCoreEndpoints();
 app.MapAutoEndpoints();
+app.MapAutoMcpEndpoints();
 
 // NOTA: nenhum Database.Migrate() aqui. As migrations sao do MigrationRunner.
 

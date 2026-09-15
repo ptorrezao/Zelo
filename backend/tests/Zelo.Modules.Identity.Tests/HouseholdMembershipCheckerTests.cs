@@ -44,4 +44,39 @@ public class HouseholdMembershipCheckerTests
 
         Assert.False(await checker.IsMemberAsync(Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None));
     }
+
+    [Fact]
+    public async Task GetMyHouseholdsAsync_UtilizadorComHousehold_DevolveOSeu()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var householdId = Guid.NewGuid();
+        db.Households.Add(new Household { Id = householdId, Name = "Casa", CreatedAt = DateTimeOffset.UtcNow });
+        db.HouseholdMembers.Add(new HouseholdMember
+        {
+            Id = Guid.NewGuid(), HouseholdId = householdId, UserId = userId,
+            Role = HouseholdRole.Owner, JoinedAt = DateTimeOffset.UtcNow,
+        });
+        await db.SaveChangesAsync();
+        var checker = new HouseholdMembershipChecker(db);
+
+        var households = await checker.GetMyHouseholdsAsync(userId, CancellationToken.None);
+
+        var item = Assert.Single(households);
+        Assert.Equal(householdId, item.Id);
+        Assert.Equal("Casa", item.Name);
+    }
+
+    [Fact]
+    public async Task GetMyHouseholdsAsync_UtilizadorSemHousehold_CriaUmAutomaticamente()
+    {
+        await using var db = NewDb();
+        var checker = new HouseholdMembershipChecker(db);
+
+        var households = await checker.GetMyHouseholdsAsync(Guid.NewGuid(), CancellationToken.None);
+
+        var item = Assert.Single(households);
+        Assert.True(item.IsDefault);
+        Assert.Equal(1, await db.Households.CountAsync());
+    }
 }

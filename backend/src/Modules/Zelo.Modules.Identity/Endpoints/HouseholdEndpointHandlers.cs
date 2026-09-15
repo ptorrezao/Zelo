@@ -19,25 +19,16 @@ internal static class HouseholdEndpointHandlers
         if (!Guid.TryParse(userIdClaim, out var userId))
             return Results.Unauthorized();
 
-        var households = await db.HouseholdMembers
-            .Where(m => m.UserId == userId)
+        // HouseholdProvisioning garante a invariante "pelo menos um
+        // household, marcado como predefinido" - evita que o utilizador
+        // fique preso sem destino nenhum para escolher (ex.: no seletor
+        // "Importar para" da importacao de veiculos), e da ao
+        // DeleteHousehold um destino garantido para onde redirecionar os
+        // itens de um household eliminado.
+        var memberships = await HouseholdProvisioning.GetOrCreateMembershipsAsync(userId, db, ct);
+        var households = memberships
             .Select(m => new HouseholdResponse(m.HouseholdId, m.Household.Name, m.Role, m.Household.IsDefault))
-            .ToListAsync(ct);
-
-        // Invariante: todo o utilizador autenticado tem sempre pelo menos
-        // um household, e marcado como predefinido - o registo ainda nao
-        // cria nenhum (nenhum gancho exposto pelo MapIdentityApi para
-        // isso), por isso criamos aqui, na primeira vez que alguem pede a
-        // lista e ela vem vazia. Evita que o utilizador fique preso sem
-        // destino nenhum para escolher (ex.: no seletor "Importar para" da
-        // importacao de veiculos), e da a DeleteHousehold um destino
-        // garantido para onde redirecionar os itens de um household
-        // eliminado.
-        if (households.Count == 0)
-        {
-            var response = await CreateHouseholdInternalAsync(userId, "A minha casa", isDefault: true, db, ct);
-            households.Add(response);
-        }
+            .ToList();
 
         return Results.Ok(households);
     }

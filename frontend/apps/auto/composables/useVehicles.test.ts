@@ -272,15 +272,34 @@ describe('useVehicles', () => {
     }
   })
 
-  it('addDocument adiciona o documento ao veiculo', async () => {
+  it('addDocument faz upload (upload-url -> PUT -> confirmar) e adiciona o documento ao veiculo', async () => {
     mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
+    client.POST.mockImplementation((path: string) => {
+      if (path === '/api/auto/vehicles/{vehicleId}/documents/upload-url') {
+        return Promise.resolve({ data: { objectKey: 'vehicles/v1/abc-Apolice.pdf', uploadUrl: 'https://storage.local/upload', expiresAt: '2026-01-01T00:00:00Z' } })
+      }
+      if (path === '/api/auto/vehicles/{vehicleId}/documents') {
+        return Promise.resolve({
+          data: {
+            id: 'd1', name: 'Apolice.pdf', category: 'Seguro', type: 'Pdf', date: '2026-01-01', sizeBytes: 1024,
+          },
+        })
+      }
+      return Promise.resolve({ data: [] })
+    })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
 
     const { useVehicles } = await import('./useVehicles')
     const { addDocument, allVehicles, isLoaded } = useVehicles()
     await vi.waitFor(() => expect(isLoaded.value).toBe(true))
 
-    addDocument('v1', { id: 'd1', name: 'Apolice.pdf', category: 'Seguro', type: 'pdf', date: '01/01/2026', size: '1.0 KB' })
+    const file = new File(['conteudo'], 'Apolice.pdf', { type: 'application/pdf' })
+    const document = await addDocument('v1', file, 'Seguro', '01/01/2026')
 
+    expect(document.name).toBe('Apolice.pdf')
+    expect(fetchMock).toHaveBeenCalledWith('https://storage.local/upload', expect.objectContaining({ method: 'PUT' }))
     expect(allVehicles.value.find(v => v.id === 'v1')?.documents).toHaveLength(1)
+    vi.unstubAllGlobals()
   })
 })

@@ -23,17 +23,24 @@ public class GarageBootstrapTests
                 RoutingFakeHttpMessageHandler.Json(HttpStatusCode.NotFound, "{}"),
             ("POST", "/v1/key/import") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "{}"),
             ("POST", "/v1/bucket/allow") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "{}"),
+            (_, var p) when p.Contains("cors", StringComparison.OrdinalIgnoreCase) =>
+                RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "<CORSConfiguration/>"),
             _ => throw new InvalidOperationException($"pedido inesperado: {method} {path}"),
         });
 
         await GarageBootstrap.RunAsync(
-            "http://garage.local", "admin-token", "zelo-bucket", "access-key", "secret-key", "zelo-api-key", handler);
+            "http://garage.local", "admin-token", "http://garage.local:3900", "zelo-bucket",
+            "access-key", "secret-key", "zelo-api-key", handler);
 
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v2/UpdateClusterLayout");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v2/ApplyClusterLayout");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/bucket");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/key/import");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/bucket/allow");
+        // PutBucketCors (S3 nativo, nao a API admin) - ver comentario em
+        // GarageBootstrap.EnsureBucketCorsAsync sobre porque nao e a
+        // "corsRules" do admin API v2.
+        Assert.Contains(handler.Requests, r => r.Path.Contains("cors", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -48,15 +55,22 @@ public class GarageBootstrapTests
             ("GET", var p) when p.StartsWith("/v1/key?id=") =>
                 RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "{}"),
             ("POST", "/v1/bucket/allow") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "{}"),
+            (_, var p) when p.Contains("cors", StringComparison.OrdinalIgnoreCase) =>
+                RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "<CORSConfiguration/>"),
             _ => throw new InvalidOperationException($"pedido inesperado: {method} {path}"),
         });
 
         await GarageBootstrap.RunAsync(
-            "http://garage.local", "admin-token", "zelo-bucket", "access-key", "secret-key", "zelo-api-key", handler);
+            "http://garage.local", "admin-token", "http://garage.local:3900", "zelo-bucket",
+            "access-key", "secret-key", "zelo-api-key", handler);
 
         Assert.DoesNotContain(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v2/UpdateClusterLayout");
         Assert.DoesNotContain(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/key/import");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/bucket/allow");
+        // Idempotente por natureza (mesmo padrao que bucket/allow) - corre
+        // sempre, nao so na primeira vez, para o bucket nunca ficar sem
+        // regra CORS mesmo que tenha sido criado antes desta feature.
+        Assert.Contains(handler.Requests, r => r.Path.Contains("cors", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -67,6 +81,7 @@ public class GarageBootstrapTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             GarageBootstrap.RunAsync(
-                "http://garage.local", "admin-token", "zelo-bucket", "access-key", "secret-key", "zelo-api-key", handler));
+                "http://garage.local", "admin-token", "http://garage.local:3900", "zelo-bucket",
+                "access-key", "secret-key", "zelo-api-key", handler));
     }
 }

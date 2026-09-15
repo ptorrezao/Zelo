@@ -25,6 +25,11 @@ services:
       FeatureFlags__ApiToken: "*:*.unleash-insecure-api-token"
       Storage__AdminUrl: "http://garage:3903"
       Storage__AdminToken: "a7cd1d89f750c10d8693ef94d6877b2c"
+      # So para a regra de CORS do bucket (PutBucketCors) - hostname
+      # interno do Docker, nao "localhost" (o migrator e um container
+      # separado do Garage, ver o mesmo problema ja resolvido para o
+      # worker mais abaixo).
+      Storage__S3Endpoint: "http://garage:3900"
       Storage__Bucket: "zelo-documents"
       Storage__AccessKey: "GK150252b5f2fe57b6e3250b27"
       Storage__SecretKey: "bd257b59116ab67336fbe92145ffc0f7e4149d599f82070281dedd036af4579c"

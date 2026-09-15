@@ -42,15 +42,20 @@ if (!string.IsNullOrWhiteSpace(unleashUrl) && !string.IsNullOrWhiteSpace(unleash
 
 var garageAdminUrl = configuration["Storage:AdminUrl"];
 var garageAdminToken = configuration["Storage:AdminToken"];
+// Endpoint S3 interno (nao o publico de Storage__Endpoint da Api/Worker) -
+// so usado aqui para a regra de CORS (PutBucketCors), ver comentario em
+// GarageBootstrap.EnsureBucketCorsAsync.
+var garageS3Endpoint = configuration["Storage:S3Endpoint"];
 var garageBucket = configuration["Storage:Bucket"];
 var garageAccessKey = configuration["Storage:AccessKey"];
 var garageSecretKey = configuration["Storage:SecretKey"];
 if (!string.IsNullOrWhiteSpace(garageAdminUrl) && !string.IsNullOrWhiteSpace(garageAdminToken)
-    && !string.IsNullOrWhiteSpace(garageBucket) && !string.IsNullOrWhiteSpace(garageAccessKey)
-    && !string.IsNullOrWhiteSpace(garageSecretKey))
+    && !string.IsNullOrWhiteSpace(garageS3Endpoint) && !string.IsNullOrWhiteSpace(garageBucket)
+    && !string.IsNullOrWhiteSpace(garageAccessKey) && !string.IsNullOrWhiteSpace(garageSecretKey))
 {
     Console.WriteLine("Zelo :: a garantir layout/bucket/chave no Garage");
-    await GarageBootstrap.RunAsync(garageAdminUrl, garageAdminToken, garageBucket, garageAccessKey, garageSecretKey, "zelo-api-key");
+    await GarageBootstrap.RunAsync(
+        garageAdminUrl, garageAdminToken, garageS3Endpoint, garageBucket, garageAccessKey, garageSecretKey, "zelo-api-key");
     Console.WriteLine("Garage pronto.");
 }
 

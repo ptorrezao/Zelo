@@ -1,5 +1,7 @@
 # Plano: Anexar Documentos a um Veículo
 
+> **Estado: essencial implementado** — o backend (upload presigned URL, criar/listar/apagar documentos) já existia em `Zelo.Modules.Auto`. Faltava mesmo a UI de anexar: `frontend/apps/auto/pages/documentos.vue` agora tem o fluxo completo (escolher categoria + ficheiro → pedir URL pré-assinado → PUT direto para o Garage → confirmar o registo). Foi preciso também configurar CORS no bucket (`GarageBootstrap.EnsureBucketCorsAsync`, via `PutBucketCors` — o upload do browser é sempre cross-origin), sem isso o PUT falhava em silêncio. Extras do plano original (checksum, antivírus, audit log, thumbnails, soft-delete, lifecycle rules) ficam fora de âmbito — não existe nada equivalente no resto do projeto, e não foram pedidos.
+
 ## Objetivo
 - Permitir anexar/associar documentos (PDF, imagens, etc.) à entidade `Vehicle` de forma segura, audível, pesquisável e escalável.
 

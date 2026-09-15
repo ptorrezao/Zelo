@@ -116,6 +116,7 @@ interna.
 |---|---|
 | `Storage__AdminUrl` | `http://<hostname do garage>:3903` |
 | `Storage__AdminToken` | `a7cd1d89f750c10d8693ef94d6877b2c` (fixo, ver compose de infra) |
+| `Storage__S3Endpoint` | `http://<hostname do garage>:3900` (interno, para a regra de CORS do bucket — ver `GarageBootstrap.EnsureBucketCorsAsync`) |
 | `Storage__Bucket`, `Storage__AccessKey`, `Storage__SecretKey` | iguais às da `api`/`worker` |
 
 **`shell`, `auto`, `inventory`** — `NUXT_PUBLIC_API_BASE` e os 3

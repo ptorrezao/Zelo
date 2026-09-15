@@ -34,6 +34,13 @@ const DOCUMENT_CATEGORY_FROM_API: Record<ApiDocument['category'], VehicleDocumen
   Registo: 'Registo',
   Fatura: 'Fatura',
 }
+const DOCUMENT_CATEGORY_TO_API: Record<VehicleDocument['category'], ApiDocument['category']> = {
+  Seguro: 'Seguro',
+  'Manutenção': 'Manutencao',
+  'Inspeção': 'Inspecao',
+  Registo: 'Registo',
+  Fatura: 'Fatura',
+}
 function mapVehicleFromApi(dto: ApiVehicle): Vehicle {
   return {
     id: dto.id,
@@ -365,12 +372,45 @@ export function useVehicles() {
     return maintenance
   }
 
-  function addDocument(vehicleId: string, document: VehicleDocument) {
-    // TODO: sem UI de upload ainda - quando existir, chamar
-    // /documents/upload-url, fazer o PUT, e so depois confirmar aqui via
-    // POST /documents com o objectKey devolvido.
+  // Fluxo em 3 pedidos: 1) pede um URL pre-assinado de upload (o backend
+  // gera a objectKey), 2) o browser envia o ficheiro diretamente para o
+  // Garage nesse URL (nunca passa pela nossa Api), 3) confirma o registo
+  // do documento com a objectKey devolvida em 1). O tipo (Pdf/Imagem) sai
+  // do content-type do proprio ficheiro - o input no formulario ja
+  // restringe a pdf/imagem via "accept", por isso qualquer outra coisa
+  // cai em Imagem por omissao (nao deveria acontecer na pratica).
+  async function addDocument(
+    vehicleId: string, file: File, category: VehicleDocument['category'], date: string,
+  ): Promise<VehicleDocument> {
+    const contentType = file.type || 'application/octet-stream'
+    const { data: uploadData, error: uploadError } = await client.POST('/api/auto/vehicles/{vehicleId}/documents/upload-url', {
+      params: { path: { vehicleId } },
+      body: { fileName: file.name, contentType },
+    })
+    const upload = uploadData as { objectKey: string, uploadUrl: string } | undefined
+    if (!upload) throw new Error(extractApiErrorMessage(uploadError, 'Não foi possível preparar o envio do ficheiro.'))
+
+    const putResponse = await fetch(upload.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': contentType } })
+    if (!putResponse.ok) throw new Error('Não foi possível enviar o ficheiro.')
+
+    const { data, error } = await client.POST('/api/auto/vehicles/{vehicleId}/documents', {
+      params: { path: { vehicleId } },
+      body: {
+        objectKey: upload.objectKey,
+        name: file.name,
+        category: DOCUMENT_CATEGORY_TO_API[category],
+        type: contentType === 'application/pdf' ? 'Pdf' : 'Imagem',
+        date: toIso(date) ?? new Date().toISOString().slice(0, 10),
+        sizeBytes: file.size,
+      },
+    })
+    const created = data as ApiDocument | undefined
+    if (!created) throw new Error(extractApiErrorMessage(error, 'Não foi possível registar o documento.'))
+
+    const document = mapDocumentFromApi(created)
     const vehicle = allVehicles.value.find(v => v.id === vehicleId)
     vehicle?.documents.push(document)
+    return document
   }
 
   return {

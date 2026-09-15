@@ -101,6 +101,15 @@ Identity, que corre lá, envia emails) — relay SMTP real em produção.
 `OpenAi__ApiKey` só vai no **`worker`** (só ele gera as fotos dos
 veículos, ver VehiclePhotoHandler) — chave de API da OpenAI.
 
+`Storage__InternalEndpoint` só vai no **`worker`** — `Storage__Endpoint`
+tem de ser o domínio público do Garage (é o que o browser usa nas URLs
+pré-assinadas), mas `UploadAsync` (upload direto de dentro do próprio
+container, ver VehiclePhotoHandler) só precisa de alcançar o Garage —
+aponta ao hostname interno do compose de infra, ex.
+`http://<hostname do garage>:3900`. Sem isto, o upload da foto falha se
+o domínio público não for alcançável a partir de dentro da rede
+interna.
+
 **`migrator`**: mesmas `ConnectionStrings__Zelo`, `FeatureFlags__*`, mais:
 
 | Variável | Valor |

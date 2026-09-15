@@ -74,6 +74,12 @@ services:
       Messaging__Password: guest
       Messaging__VirtualHost: "/"
       Storage__Endpoint: "http://localhost:3900"
+      # So o worker faz upload direto (UploadAsync, ver VehiclePhotoHandler)
+      # - Storage__Endpoint tem de ficar "localhost" para as URLs
+      # pre-assinadas que o browser usa, mas dentro deste container
+      # "localhost" e o proprio container, nao o Garage (ver
+      # StorageOptions.InternalEndpoint).
+      Storage__InternalEndpoint: "http://garage:3900"
       Storage__Region: "garage"
       Storage__Bucket: "zelo-documents"
       Storage__AccessKey: "GK150252b5f2fe57b6e3250b27"
@@ -83,6 +89,11 @@ services:
       FeatureFlags__ApiToken: "*:*.unleash-insecure-api-token"
       Email__SmtpHost: mailhog
       Email__SmtpPort: "1025"
+      # So o worker gera fotos (ver VehiclePhotoHandler) - definida em
+      # infra/compose/.env (nao commitado, ver .env.example), vazia por
+      # omissao. Sem chave, a geracao falha com 401 e fica so a logar um
+      # warning - nunca bloqueia a criacao do veiculo.
+      OpenAi__ApiKey: "${OPENAI_API_KEY:-}"
     depends_on:
       migrator: { condition: service_completed_successfully }
       lavinmq: { condition: service_healthy }

@@ -1,4 +1,5 @@
 using System.Net.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using Zelo.Modules.Auto.Consumers;
 using Zelo.Modules.Auto.Endpoints;
 using Zelo.Modules.Auto.Infrastructure;
 using Zelo.ServiceDefaults;
+using Zelo.SharedKernel;
 
 namespace Zelo.Modules.Auto;
 
@@ -52,12 +54,17 @@ public static class AutoModule
     /// Chamado APENAS pela Api, depois de app.Build() - tools MCP do
     /// modulo, paralelas a MapAutoEndpoints mas com o seu proprio grupo de
     /// rota e feature flag (ver docs/modules/module-contract.md, seccao 5).
+    /// So aceita o scheme ApiKey (nunca o bearer token de sessao do
+    /// browser) - um agente MCP fica sempre ligado, uma sessao de browser
+    /// nao; ver ApiKeyAuthenticationHandler em Zelo.Modules.Identity.
     public static IEndpointRouteBuilder MapAutoMcpEndpoints(this IEndpointRouteBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapGroup("/mcp/auto")
-            .RequireAuthorization()
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(ApiKeyDefaults.Scheme)
+                .RequireAuthenticatedUser())
             .RequireFeatureFlag("auto-mcp-enabled")
             .MapMcp();
 

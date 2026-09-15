@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -43,6 +44,13 @@ public static class IdentityModule
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<IdentityDbContext>();
+
+        // Scheme adicional, so para quem o pedir explicitamente (ver
+        // AutoModule.MapAutoMcpEndpoints) - AddIdentityApiEndpoints ja
+        // definiu "Identity.Bearer" como scheme por omissao, isto nao o
+        // muda; a sessao normal do browser continua inafetada.
+        services.AddAuthentication()
+            .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyDefaults.Scheme, null);
 
         return services;
     }

@@ -145,17 +145,8 @@ internal static class AutoEndpointHandlers
 
     public static async Task<IResult> PreviewImport(
         Guid householdId, ImportConnectRequest request, ClaimsPrincipal caller,
-        AutoDbContext db, IImportRemoteClient remoteClient, CancellationToken ct)
+        HttpContext httpContext, AutoDbContext db, IImportRemoteClient remoteClient, CancellationToken ct)
     {
-        // O utilizador nao pode importar de si mesmo - seria sempre um
-        // no-op (os "veiculos de origem" ja sao os dele) e so serviria
-        // para confundir. Comparamos pelo email de login, nao pelo id -
-        // não sabemos o id do lado remoto sem autenticar lá primeiro, e
-        // aqui queremos bloquear ANTES de sequer tentar ligar.
-        var callerEmail = caller.FindFirstValue(ClaimTypes.Email) ?? caller.FindFirstValue(ClaimTypes.Name);
-        if (!string.IsNullOrEmpty(callerEmail) && string.Equals(callerEmail, request.Email, StringComparison.OrdinalIgnoreCase))
-            return Results.BadRequest(new { error = "Não pode importar veículos de si mesmo — indique as credenciais de outro utilizador." });
-
         if (!Uri.TryCreate(request.BaseUrl, UriKind.Absolute, out var baseUrl))
             return Results.BadRequest(new { error = "URL do ambiente de origem inválido." });
 
@@ -167,6 +158,16 @@ internal static class AutoEndpointHandlers
             // falhar (site mais antigo, ou o utilizador ja colou diretamente
             // o URL da API), fica-se com o URL original tal como veio.
             var apiBaseUrl = await remoteClient.ResolveApiBaseAsync(baseUrl, ct);
+
+            // So e no-op garantido se o ambiente remoto resolvido e este
+            // mesmo host (nao so o mesmo email - o mesmo utilizador tem
+            // legitimamente contas com o mesmo email em ambientes diferentes,
+            // e essa e precisamente a razao de existir esta funcionalidade).
+            var callerEmail = caller.FindFirstValue(ClaimTypes.Email) ?? caller.FindFirstValue(ClaimTypes.Name);
+            var isSameHost = string.Equals(apiBaseUrl.Authority, httpContext.Request.Host.ToUriComponent(), StringComparison.OrdinalIgnoreCase);
+            if (isSameHost && !string.IsNullOrEmpty(callerEmail) && string.Equals(callerEmail, request.Email, StringComparison.OrdinalIgnoreCase))
+                return Results.BadRequest(new { error = "Não pode importar veículos de si mesmo — indique as credenciais de outro utilizador." });
+
             var token = await remoteClient.LoginAsync(apiBaseUrl, request.Email, request.Password, ct);
 
             Guid remoteHouseholdId;

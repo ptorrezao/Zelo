@@ -336,6 +336,22 @@ public class AutoEndpointHandlersTests
     private static ClaimsPrincipal CallerWithEmail(string email) =>
         new(new ClaimsIdentity([new Claim(ClaimTypes.Email, email)]));
 
+    /// PreviewImport agora precisa de um HttpContext para comparar o host do
+    /// pedido com o do ambiente remoto resolvido (ver
+    /// plans/fix-cross-environment-import-false-self-block.md).
+    private static HttpContext HttpContextWithHost(string host)
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Host = new HostString(host);
+        return ctx;
+    }
+
+    private static string GetErrorMessage(IResult result)
+    {
+        var value = Assert.IsAssignableFrom<IValueHttpResult>(result);
+        return (string)value.Value!.GetType().GetProperty("error")!.GetValue(value.Value)!;
+    }
+
     [Fact]
     public async Task PreviewImport_MarcaVeiculosComMatriculaJaExistenteComoAlreadyExists()
     {
@@ -350,7 +366,8 @@ public class AutoEndpointHandlersTests
         var request = new ImportConnectRequest("https://origem.exemplo", "user@origem.com", "pwd", Guid.NewGuid());
 
         var result = await AutoEndpointHandlers.PreviewImport(
-            destino, request, CallerWithEmail("destino@exemplo.com"), db, remoteClient, CancellationToken.None);
+            destino, request, CallerWithEmail("destino@exemplo.com"),
+            HttpContextWithHost("destino.exemplo"), db, remoteClient, CancellationToken.None);
 
         var ok = Assert.IsType<Ok<ImportPreviewResponse>>(result);
         Assert.Equal(ImportPreviewStatus.VehiclesReady, ok.Value!.Status);
@@ -369,7 +386,8 @@ public class AutoEndpointHandlersTests
         var request = new ImportConnectRequest("https://origem.exemplo", "user@origem.com", "pwd", null);
 
         var result = await AutoEndpointHandlers.PreviewImport(
-            Guid.NewGuid(), request, CallerWithEmail("destino@exemplo.com"), db, remoteClient, CancellationToken.None);
+            Guid.NewGuid(), request, CallerWithEmail("destino@exemplo.com"),
+            HttpContextWithHost("destino.exemplo"), db, remoteClient, CancellationToken.None);
 
         var ok = Assert.IsType<Ok<ImportPreviewResponse>>(result);
         Assert.Equal(ImportPreviewStatus.ChooseHousehold, ok.Value!.Status);
@@ -388,27 +406,49 @@ public class AutoEndpointHandlersTests
         var request = new ImportConnectRequest("https://origem.exemplo", "user@origem.com", "pwd", Guid.NewGuid());
 
         var result = await AutoEndpointHandlers.PreviewImport(
-            Guid.NewGuid(), request, CallerWithEmail("destino@exemplo.com"), db, remoteClient, CancellationToken.None);
+            Guid.NewGuid(), request, CallerWithEmail("destino@exemplo.com"),
+            HttpContextWithHost("destino.exemplo"), db, remoteClient, CancellationToken.None);
 
         var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
         Assert.Equal(400, statusResult.StatusCode);
     }
 
     [Fact]
-    public async Task PreviewImport_MesmoEmailDoUtilizadorAtual_BloqueiaSemChamarORemoto()
+    public async Task PreviewImport_MesmoEmailEMesmoHost_BloqueiaAntesDoLogin()
     {
         await using var db = NewDb();
-        var remoteClient = new FakeImportRemoteClient
-        {
-            FailWith = new ImportRemoteException("nao devia chegar a ser chamado"),
-        };
+        // ResolveApiBaseAsync (fake) faz eco do BaseUrl - mesmo host que o
+        // pedido esta a chegar => e garantidamente o proprio ambiente.
+        var remoteClient = new FakeImportRemoteClient();
         var request = new ImportConnectRequest("https://origem.exemplo", "eu@exemplo.com", "pwd", Guid.NewGuid());
 
         var result = await AutoEndpointHandlers.PreviewImport(
-            Guid.NewGuid(), request, CallerWithEmail("eu@exemplo.com"), db, remoteClient, CancellationToken.None);
+            Guid.NewGuid(), request, CallerWithEmail("eu@exemplo.com"),
+            HttpContextWithHost("origem.exemplo"), db, remoteClient, CancellationToken.None);
 
-        var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
-        Assert.Equal(400, statusResult.StatusCode);
+        Assert.Contains("si mesmo", GetErrorMessage(result));
+    }
+
+    [Fact]
+    public async Task PreviewImport_MesmoEmailMasHostDiferente_NaoBloqueiaSeguePorLogin()
+    {
+        await using var db = NewDb();
+        // Mesmo email de login dos dois lados, mas ambientes (hosts)
+        // diferentes - caso normal de importacao entre ambientes, nao deve
+        // bloquear (ver plans/fix-cross-environment-import-false-self-block.md).
+        var remoteClient = new FakeImportRemoteClient
+        {
+            Households = [new ImportHouseholdOption(Guid.NewGuid(), "Casa 1")],
+            Vehicles = [NewCandidate("CC-11-DD")],
+        };
+        var request = new ImportConnectRequest("https://origem.exemplo", "eu@exemplo.com", "pwd", null);
+
+        var result = await AutoEndpointHandlers.PreviewImport(
+            Guid.NewGuid(), request, CallerWithEmail("eu@exemplo.com"),
+            HttpContextWithHost("destino.exemplo"), db, remoteClient, CancellationToken.None);
+
+        var ok = Assert.IsType<Ok<ImportPreviewResponse>>(result);
+        Assert.Equal(ImportPreviewStatus.VehiclesReady, ok.Value!.Status);
     }
 
     [Fact]

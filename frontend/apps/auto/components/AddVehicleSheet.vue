@@ -58,6 +58,19 @@ const categoryOptions = [
 const brandsForCategory = computed(() => catalog.value[category.value] ?? {})
 const brandSuggestions = computed(() => Object.keys(brandsForCategory.value))
 const modelSuggestions = computed(() => brandsForCategory.value[brand.value] ?? [])
+
+// So quando o utilizador troca a categoria a mao - marca/modelo de uma
+// categoria raramente fazem sentido na outra. Um watch(category, ...)
+// dispararia tambem quando reset()/loadFromVehicle() atribuem
+// category.value de proposito (ao abrir o sheet), apagando o que acabaram
+// de preencher - por isso o handler fica so aqui, ligado ao evento do
+// Select, e reset()/loadFromVehicle() continuam a atribuir category.value
+// diretamente sem passar por ele.
+function handleCategoryChange(value: string) {
+  category.value = value as typeof category.value
+  brand.value = ''
+  model.value = ''
+}
 const COLOR_SUGGESTIONS = [
   'Branco', 'Preto', 'Cinzento', 'Prata', 'Azul', 'Vermelho',
   'Verde', 'Amarelo', 'Castanho', 'Bege', 'Laranja', 'Roxo',
@@ -163,7 +176,7 @@ async function handleSubmit() {
       <form class="flex flex-1 flex-col gap-4 overflow-y-auto pr-1" @submit.prevent="handleSubmit">
         <div class="flex flex-col gap-2">
           <label class="text-sm font-medium">Categoria</label>
-          <Select v-model="category" :options="categoryOptions" />
+          <Select :model-value="category" :options="categoryOptions" @update:model-value="handleCategoryChange" />
         </div>
 
         <div class="grid grid-cols-2 gap-4">

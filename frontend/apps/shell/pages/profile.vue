@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useHousehold } from '../composables/useHousehold'
+import { useApiKeys } from '../composables/useApiKeys'
 import { useCurrentUser } from '@zelo/ui/composables/useCurrentUser'
 import Avatar from '@zelo/ui/components/ui/Avatar.vue'
 import Button from '@zelo/ui/components/ui/Button.vue'
@@ -104,6 +105,71 @@ async function confirmRemove(householdId: string) {
   } finally {
     isSaving.value = false
   }
+}
+
+// Chaves de API - credencial de longa duracao para agentes/integracoes
+// (ex.: MCP do Auto), separada da sessao normal.
+const { apiKeys, create: createApiKey, revoke: revokeApiKey } = useApiKeys()
+
+const isAddingApiKey = ref(false)
+const newApiKeyName = ref('')
+const isSavingApiKey = ref(false)
+const apiKeyErrorMessage = ref('')
+
+// So preenchido logo depois de criar uma chave - e a unica vez que o
+// valor em claro existe (o backend so guarda o hash), por isso mostra-se
+// aqui uma vez e depois perde-se para sempre.
+const revealedKey = ref<{ name: string, key: string } | null>(null)
+const copyFeedback = ref(false)
+
+async function addApiKey() {
+  if (!newApiKeyName.value.trim()) return
+  isSavingApiKey.value = true
+  apiKeyErrorMessage.value = ''
+  try {
+    const key = await createApiKey(newApiKeyName.value)
+    revealedKey.value = { name: newApiKeyName.value, key }
+    newApiKeyName.value = ''
+    isAddingApiKey.value = false
+  } catch (err) {
+    apiKeyErrorMessage.value = err instanceof Error ? err.message : 'Não foi possível criar a chave.'
+  } finally {
+    isSavingApiKey.value = false
+  }
+}
+
+async function copyRevealedKey() {
+  if (!revealedKey.value) return
+  try {
+    await navigator.clipboard.writeText(revealedKey.value.key)
+    copyFeedback.value = true
+    setTimeout(() => (copyFeedback.value = false), 2000)
+  } catch {
+    // Permissao de clipboard negada (browser/contexto sem HTTPS, ou
+    // recusada pelo utilizador) - a chave continua visivel no ecra para
+    // copiar a mao, so o botao deixa de dar feedback de sucesso.
+    apiKeyErrorMessage.value = 'Não foi possível copiar automaticamente - copia o valor acima manualmente.'
+  }
+}
+
+const revokingApiKeyId = ref<string | null>(null)
+
+async function confirmRevokeApiKey(id: string) {
+  isSavingApiKey.value = true
+  apiKeyErrorMessage.value = ''
+  try {
+    await revokeApiKey(id)
+    revokingApiKeyId.value = null
+  } catch (err) {
+    apiKeyErrorMessage.value = err instanceof Error ? err.message : 'Não foi possível revogar a chave.'
+  } finally {
+    isSavingApiKey.value = false
+  }
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return 'Nunca'
+  return new Date(iso).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 </script>
 
@@ -231,6 +297,76 @@ async function confirmRemove(householdId: string) {
             </div>
           </template>
           <Button v-else size="sm" variant="outline" @click="isAddingHousehold = true">+ Adicionar household</Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Chaves de API</CardTitle>
+        </CardHeader>
+        <CardContent class="flex flex-col gap-4">
+          <p class="text-sm text-muted-foreground">
+            Para ligar agentes ou integrações (ex.: o servidor MCP do Auto) sem depender da sessão do browser, que expira em 1 hora.
+          </p>
+
+          <p v-if="apiKeyErrorMessage" class="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+            {{ apiKeyErrorMessage }}
+          </p>
+
+          <div v-if="revealedKey" class="flex flex-col gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+            <p class="text-xs font-semibold text-amber-700">
+              Copia agora "{{ revealedKey.name }}" — não vais voltar a vê-la.
+            </p>
+            <code class="break-all rounded bg-background/60 p-2 text-xs">{{ revealedKey.key }}</code>
+            <div class="flex gap-2">
+              <Button size="sm" variant="outline" @click="copyRevealedKey">{{ copyFeedback ? 'Copiado!' : 'Copiar' }}</Button>
+              <Button size="sm" variant="outline" @click="revealedKey = null">Fechar</Button>
+            </div>
+          </div>
+
+          <div v-if="apiKeys.length === 0" class="text-sm text-muted-foreground">
+            Ainda não tens nenhuma chave de API.
+          </div>
+
+          <div v-for="apiKey in apiKeys" :key="apiKey.id" class="flex flex-col gap-2 border-b border-border pb-4 last:border-0 last:pb-0">
+            <template v-if="revokingApiKeyId === apiKey.id">
+              <p class="text-sm">Revogar "{{ apiKey.name }}"? Deixa de dar acesso de imediato - não pode ser desfeito.</p>
+              <div class="flex gap-2">
+                <Button size="sm" variant="outline" :disabled="isSavingApiKey" @click="confirmRevokeApiKey(apiKey.id)">Sim, revogar</Button>
+                <Button size="sm" variant="outline" :disabled="isSavingApiKey" @click="revokingApiKeyId = null">Cancelar</Button>
+              </div>
+            </template>
+            <template v-else>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium">
+                    {{ apiKey.name }}
+                    <span v-if="apiKey.revokedAt" class="ml-1 text-xs font-normal text-destructive">(revogada)</span>
+                  </p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ apiKey.displayPrefix }}… · criada em {{ formatDate(apiKey.createdAt) }} · última utilização: {{ formatDate(apiKey.lastUsedAt) }}
+                  </p>
+                </div>
+                <Button
+                  v-if="!apiKey.revokedAt"
+                  size="sm"
+                  variant="outline"
+                  @click="revokingApiKeyId = apiKey.id"
+                >
+                  Revogar
+                </Button>
+              </div>
+            </template>
+          </div>
+
+          <template v-if="isAddingApiKey">
+            <Input v-model="newApiKeyName" placeholder="Nome da chave, ex. Claude" />
+            <div class="flex gap-2">
+              <Button size="sm" :disabled="isSavingApiKey" @click="addApiKey">Criar</Button>
+              <Button size="sm" variant="outline" :disabled="isSavingApiKey" @click="isAddingApiKey = false">Cancelar</Button>
+            </div>
+          </template>
+          <Button v-else size="sm" variant="outline" @click="isAddingApiKey = true">+ Nova chave de API</Button>
         </CardContent>
       </Card>
     </div>

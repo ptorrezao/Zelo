@@ -60,6 +60,20 @@ public static class IdentityEndpoints
             .Produces<UserProfileResponse>()
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
+        // Chaves de API pessoais (ver ApiKey) - geridas so pela sessao
+        // normal do browser, nunca por outra chave de API.
+        app.MapGet("/api/v1/api-keys", ApiKeyEndpointHandlers.GetMyApiKeys)
+            .RequireAuthorization()
+            .Produces<List<ApiKeyResponse>>();
+        app.MapPost("/api/v1/api-keys", ApiKeyEndpointHandlers.CreateApiKey)
+            .RequireAuthorization()
+            .Produces<CreateApiKeyResponse>(StatusCodes.Status201Created)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
+        app.MapDelete("/api/v1/api-keys/{id:guid}", ApiKeyEndpointHandlers.RevokeApiKey)
+            .RequireAuthorization()
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 }

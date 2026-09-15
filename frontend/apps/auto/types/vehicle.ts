@@ -57,6 +57,7 @@ export interface Vehicle {
   insurancePremium: string
   iucDueDate: string
   odometer: string
+  photoUrl: string | null
   maintenances: Maintenance[]
   documents: VehicleDocument[]
   stats: VehicleStats

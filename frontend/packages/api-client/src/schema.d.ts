@@ -1733,6 +1733,7 @@ export interface components {
             insurancePremium: null | number | string;
             /** Format: date */
             iucDueDate: null | string;
+            photoUrl: null | string;
         };
         /** @enum {unknown} */
         VehicleStatus: "Ativo" | "Vendido" | "Abatido";

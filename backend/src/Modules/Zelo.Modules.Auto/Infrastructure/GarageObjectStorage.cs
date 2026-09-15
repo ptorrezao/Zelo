@@ -33,11 +33,34 @@ internal sealed class GarageObjectStorage : IObjectStorage
     {
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
 
+        var url = PreSign(objectKey, HttpVerb.PUT, expiresAt, contentType);
+
+        return (new Uri(url), expiresAt);
+    }
+
+    public async Task UploadAsync(string objectKey, byte[] content, string contentType, CancellationToken ct = default)
+    {
+        using var stream = new MemoryStream(content);
+        await _client.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = _options.Bucket,
+            Key = objectKey,
+            InputStream = stream,
+            ContentType = contentType,
+            AutoCloseStream = false,
+        }, ct);
+    }
+
+    public Uri CreateReadUrl(string objectKey, TimeSpan validFor) =>
+        new(PreSign(objectKey, HttpVerb.GET, DateTimeOffset.UtcNow.Add(validFor), contentType: null));
+
+    private string PreSign(string objectKey, HttpVerb verb, DateTimeOffset expiresAt, string? contentType)
+    {
         var url = _client.GetPreSignedURL(new GetPreSignedUrlRequest
         {
             BucketName = _options.Bucket,
             Key = objectKey,
-            Verb = HttpVerb.PUT,
+            Verb = verb,
             Expires = expiresAt.UtcDateTime,
             ContentType = contentType,
         });
@@ -51,6 +74,6 @@ internal sealed class GarageObjectStorage : IObjectStorage
             url = "http://" + url["https://".Length..];
         }
 
-        return (new Uri(url), expiresAt);
+        return url;
     }
 }

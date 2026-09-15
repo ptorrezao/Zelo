@@ -142,7 +142,7 @@ public class AutoMcpToolsTests
         await db.SaveChangesAsync();
 
         var result = await AutoMcpTools.ListVehicles(
-            householdId, db, new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None);
+            householdId, db, new FakeObjectStorage(), new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None);
 
         Assert.Single(result);
     }
@@ -153,7 +153,7 @@ public class AutoMcpToolsTests
         await using var db = NewDb();
 
         await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.ListVehicles(
-            Guid.NewGuid(), db, new FakeMembershipChecker(isMember: false), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
+            Guid.NewGuid(), db, new FakeObjectStorage(), new FakeMembershipChecker(isMember: false), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public class AutoMcpToolsTests
         await using var db = NewDb();
 
         await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.ListVehicles(
-            Guid.NewGuid(), db, new FakeMembershipChecker(), NewHttpContextAccessor(), CancellationToken.None));
+            Guid.NewGuid(), db, new FakeObjectStorage(), new FakeMembershipChecker(), NewHttpContextAccessor(), CancellationToken.None));
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class AutoMcpToolsTests
         await db.SaveChangesAsync();
 
         await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.GetVehicle(
-            Guid.NewGuid(), vehicle.Id, db, new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
+            Guid.NewGuid(), vehicle.Id, db, new FakeObjectStorage(), new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public class AutoMcpToolsTests
             householdId, VehicleCategory.Ligeiros, "Toyota", "Corolla", "AA-00-BB", "VIN123", "Branco", "Pedro",
             10_000, new DateOnly(2020, 1, 1), null, "Fidelidade", "AP-12345",
             new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1), 350.00m, null,
-            db, events, new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None);
+            db, events, new FakeObjectStorage(), new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None);
 
         Assert.Equal("Toyota", result.Brand);
         Assert.Equal(1, await db.Vehicles.CountAsync());
@@ -207,7 +207,7 @@ public class AutoMcpToolsTests
         await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.UpdateVehicle(
             Guid.NewGuid(), vehicle.Id, VehicleCategory.Ligeiros, "Toyota", "Corolla", "AA-00-BB", "VIN123",
             "Azul", null, 10_000, new DateOnly(2020, 1, 1), null, null, null, null, null, null, null,
-            db, events, new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
+            db, events, new FakeObjectStorage(), new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
     }
 
     [Fact]
@@ -221,7 +221,7 @@ public class AutoMcpToolsTests
         await db.SaveChangesAsync();
 
         var result = await AutoMcpTools.ArchiveVehicle(
-            householdId, vehicle.Id, VehicleStatus.Vendido, db, events, new FakeMembershipChecker(),
+            householdId, vehicle.Id, VehicleStatus.Vendido, db, events, new FakeObjectStorage(), new FakeMembershipChecker(),
             NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None);
 
         Assert.Equal(VehicleStatus.Vendido, result.Status);

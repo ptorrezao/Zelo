@@ -37,7 +37,7 @@ public class AutoEndpointHandlersTests
         var events = new FakeEventPublisher();
         var householdId = Guid.NewGuid();
 
-        var result = await AutoEndpointHandlers.CreateVehicle(householdId, NewVehicleRequest(), db, events, CancellationToken.None);
+        var result = await AutoEndpointHandlers.CreateVehicle(householdId, NewVehicleRequest(), db, events, new FakeObjectStorage(), CancellationToken.None);
 
         var created = Assert.IsType<Created<VehicleResponse>>(result);
         Assert.Equal("Toyota", created.Value!.Brand);
@@ -58,7 +58,7 @@ public class AutoEndpointHandlersTests
         await db.SaveChangesAsync();
         var request = NewVehicleRequest() with { Color = "Azul" };
 
-        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, CancellationToken.None);
+        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, new FakeObjectStorage(), CancellationToken.None);
 
         var ok = Assert.IsType<Ok<VehicleResponse>>(result);
         Assert.Equal("Azul", ok.Value!.Color);
@@ -71,7 +71,7 @@ public class AutoEndpointHandlersTests
         var events = new FakeEventPublisher();
         var request = NewVehicleRequest() with { NextInspection = new DateOnly(2027, 6, 1) };
 
-        await AutoEndpointHandlers.CreateVehicle(Guid.NewGuid(), request, db, events, CancellationToken.None);
+        await AutoEndpointHandlers.CreateVehicle(Guid.NewGuid(), request, db, events, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.Equal(2, events.Published.Count);
         var vehicle = await db.Vehicles.FirstAsync();
@@ -90,7 +90,7 @@ public class AutoEndpointHandlersTests
             NewVehicle(outro, "BMW", "X1"));
         await db.SaveChangesAsync();
 
-        var result = await AutoEndpointHandlers.GetVehicles(household, db, CancellationToken.None);
+        var result = await AutoEndpointHandlers.GetVehicles(household, db, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.Equal(2, result.Count);
         Assert.Equal("Audi", result[0].Brand);
@@ -102,7 +102,7 @@ public class AutoEndpointHandlersTests
     {
         await using var db = NewDb();
 
-        var result = await AutoEndpointHandlers.GetVehicle(Guid.NewGuid(), db, CancellationToken.None);
+        var result = await AutoEndpointHandlers.GetVehicle(Guid.NewGuid(), db, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.IsType<NotFound>(result);
     }
@@ -117,7 +117,7 @@ public class AutoEndpointHandlersTests
         await db.SaveChangesAsync();
         var request = NewVehicleRequest() with { Odometer = 55_000 };
 
-        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, CancellationToken.None);
+        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, new FakeObjectStorage(), CancellationToken.None);
 
         var ok = Assert.IsType<Ok<VehicleResponse>>(result);
         Assert.Equal(55_000, ok.Value!.Odometer);
@@ -130,7 +130,7 @@ public class AutoEndpointHandlersTests
         await using var db = NewDb();
         var events = new FakeEventPublisher();
 
-        var result = await AutoEndpointHandlers.UpdateVehicle(Guid.NewGuid(), NewVehicleRequest(), db, events, CancellationToken.None);
+        var result = await AutoEndpointHandlers.UpdateVehicle(Guid.NewGuid(), NewVehicleRequest(), db, events, new FakeObjectStorage(), CancellationToken.None);
 
         Assert.IsType<NotFound>(result);
     }

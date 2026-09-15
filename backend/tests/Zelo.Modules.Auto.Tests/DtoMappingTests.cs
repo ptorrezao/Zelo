@@ -1,6 +1,7 @@
 using Xunit;
 using Zelo.Modules.Auto.Domain;
 using Zelo.Modules.Auto.Endpoints;
+using Zelo.Modules.Auto.Infrastructure;
 
 namespace Zelo.Modules.Auto.Tests;
 
@@ -26,7 +27,7 @@ public class DtoMappingTests
             Insurer = "Fidelidade",
         };
 
-        var response = VehicleResponse.From(vehicle);
+        var response = VehicleResponse.From(vehicle, new FakeObjectStorage());
 
         Assert.Equal(vehicle.Id, response.Id);
         Assert.Equal(VehicleCategory.Motociclos, response.Category);
@@ -34,6 +35,28 @@ public class DtoMappingTests
         Assert.Equal(24780, response.Odometer);
         Assert.Equal(new DateOnly(2021, 6, 15), response.Registered);
         Assert.Equal("Fidelidade", response.Insurer);
+        Assert.Null(response.PhotoUrl); // sem PhotoObjectKey, sem URL
+    }
+
+    [Fact]
+    public void VehicleResponse_From_ComPhotoObjectKey_ResolveUrlDeLeitura()
+    {
+        var vehicle = new Vehicle
+        {
+            Id = Guid.NewGuid(),
+            HouseholdId = Guid.NewGuid(),
+            Category = VehicleCategory.Ligeiros,
+            Brand = "Toyota",
+            Model = "Corolla",
+            Plate = "AA-00-BB",
+            Vin = "VIN123",
+            PhotoObjectKey = "vehicles/x/photo.png",
+        };
+
+        var response = VehicleResponse.From(vehicle, new FakeObjectStorage());
+
+        Assert.NotNull(response.PhotoUrl);
+        Assert.Contains("vehicles/x/photo.png", response.PhotoUrl);
     }
 
     [Fact]

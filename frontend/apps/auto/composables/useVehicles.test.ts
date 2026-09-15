@@ -42,6 +42,7 @@ function apiVehicle(overrides: Partial<Record<string, unknown>> = {}) {
     insurancePeriodEnd: null,
     insurancePremium: null,
     iucDueDate: null,
+    photoUrl: null,
     ...overrides,
   }
 }
@@ -65,6 +66,19 @@ describe('useVehicles', () => {
     await vi.waitFor(() => expect(isLoaded.value).toBe(true))
 
     expect(allVehicles.value).toHaveLength(2)
+  })
+
+  it('mapeia photoUrl da API, ou null quando a foto ainda nao existe', async () => {
+    mockGet({
+      '/api/auto/vehicles': [apiVehicle({ id: 'v1', photoUrl: 'https://storage.local/vehicles/v1/photo.png' }), apiVehicle({ id: 'v2', photoUrl: null })],
+    })
+
+    const { useVehicles } = await import('./useVehicles')
+    const { allVehicles, isLoaded } = useVehicles()
+    await vi.waitFor(() => expect(isLoaded.value).toBe(true))
+
+    expect(allVehicles.value.find(v => v.id === 'v1')?.photoUrl).toBe('https://storage.local/vehicles/v1/photo.png')
+    expect(allVehicles.value.find(v => v.id === 'v2')?.photoUrl).toBeNull()
   })
 
   it('seleciona automaticamente o primeiro veiculo carregado', async () => {

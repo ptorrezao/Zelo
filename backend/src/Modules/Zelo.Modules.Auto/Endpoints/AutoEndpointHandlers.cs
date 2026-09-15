@@ -18,18 +18,20 @@ internal static class AutoEndpointHandlers
 {
     public static IResult GetVehicleCatalog() => Results.Ok(VehicleCatalogLoader.Get());
 
-    public static async Task<List<VehicleResponse>> GetVehicles(Guid householdId, AutoDbContext db, CancellationToken ct) =>
-        await db.Vehicles
+    public static async Task<List<VehicleResponse>> GetVehicles(Guid householdId, AutoDbContext db, IObjectStorage storage, CancellationToken ct)
+    {
+        var vehicles = await db.Vehicles
             .Where(v => v.HouseholdId == householdId)
             .OrderBy(v => v.Brand).ThenBy(v => v.Model)
-            .Select(v => VehicleResponse.From(v))
             .ToListAsync(ct);
+        return [.. vehicles.Select(v => VehicleResponse.From(v, storage))];
+    }
 
     public static async Task<IResult> CreateVehicle(
-        Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
+        Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, IObjectStorage storage, CancellationToken ct)
     {
         var vehicle = await CreateVehicleEntityAsync(householdId, request, db, events, ct);
-        return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle));
+        return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle, storage));
     }
 
     /// Construcao/persistencia partilhada entre CreateVehicle, ConfirmImport
@@ -75,14 +77,14 @@ internal static class AutoEndpointHandlers
         return vehicle;
     }
 
-    public static async Task<IResult> GetVehicle(Guid id, AutoDbContext db, CancellationToken ct) =>
-        await db.Vehicles.FindAsync([id], ct) is { } v ? Results.Ok(VehicleResponse.From(v)) : Results.NotFound();
+    public static async Task<IResult> GetVehicle(Guid id, AutoDbContext db, IObjectStorage storage, CancellationToken ct) =>
+        await db.Vehicles.FindAsync([id], ct) is { } v ? Results.Ok(VehicleResponse.From(v, storage)) : Results.NotFound();
 
     public static async Task<IResult> UpdateVehicle(
-        Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
+        Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, IObjectStorage storage, CancellationToken ct)
     {
         var vehicle = await UpdateVehicleEntityAsync(id, request, db, events, ct);
-        return vehicle is null ? Results.NotFound() : Results.Ok(VehicleResponse.From(vehicle));
+        return vehicle is null ? Results.NotFound() : Results.Ok(VehicleResponse.From(vehicle, storage));
     }
 
     /// Partilhada com AutoMcpTools.UpdateVehicle - devolve null (em vez de

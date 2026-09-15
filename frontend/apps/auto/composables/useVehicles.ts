@@ -53,6 +53,7 @@ function mapVehicleFromApi(dto: ApiVehicle): Vehicle {
     insurancePremium: dto.insurancePremium != null ? formatCostValue(Number(dto.insurancePremium)) : '—',
     iucDueDate: fromIso(dto.iucDueDate),
     odometer: formatKmValue(Number(dto.odometer)),
+    photoUrl: dto.photoUrl ?? null,
     maintenances: [],
     documents: [],
     // O endpoint /stats nao devolve consumo medio nem o detalhe mensal -
@@ -394,9 +395,13 @@ function fullName(vehicle: Vehicle) {
 // browser pedia-o em "/vehicles/..." (raiz do dominio, apanhado pela
 // shell) em vez de "/auto/vehicles/...". Prefixar com o baseURL da app
 // corrige isto nos dois casos (raiz e sub-path).
+// A foto e gerada por veiculo real (nao por entrada de catalogo) e
+// servida pela Api via URL pre-assinada com validade curta - ver
+// VehicleResponse.PhotoUrl e plans/vehicle-image-generation.md. Sem
+// PhotoUrl (geracao ainda a decorrer, ou falhou), VehiclePhoto mostra o
+// placeholder de sempre.
 function photoFor(vehicle: Vehicle) {
-  const baseURL = useRuntimeConfig().app.baseURL
-  return `${baseURL}vehicles/${slugify(fullName(vehicle))}.png`
+  return vehicle.photoUrl ?? ''
 }
 
 function logoFor(vehicle: Vehicle) {

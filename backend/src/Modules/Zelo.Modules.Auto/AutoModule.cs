@@ -39,6 +39,18 @@ public static class AutoModule
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
+        // So o Worker gera fotos (ver VehiclePhotoHandler), mas AddAutoModule
+        // e partilhado pelos dois hosts - registar aqui tambem e inofensivo,
+        // o HttpClient so e usado quando o handler realmente corre. Trocar de
+        // fornecedor (ex.: Nano Banana) e so mudar esta linha - ver
+        // IVehicleImageGenerator.
+        services.Configure<OpenAiOptions>(configuration.GetSection(OpenAiOptions.SectionName));
+        services.AddHttpClient<IVehicleImageGenerator, OpenAiVehicleImageGenerator>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.openai.com");
+            client.Timeout = TimeSpan.FromMinutes(2); // geracao de imagem e lenta
+        });
+
         // AutoMcpTools precisa do ClaimsPrincipal do pedido para validar
         // household membership - HttpContextAccessor nao vem registado por
         // omissao. So tem efeito na Api (unico host que mapeia endpoints);
@@ -75,6 +87,7 @@ public static class AutoModule
     public static IServiceCollection AddAutoConsumers(this IServiceCollection services)
     {
         services.AddZeloEventHandler<HouseholdDeleted, HouseholdDeletedHandler>("auto.householddeleted");
+        services.AddZeloEventHandler<AssetCreated, VehiclePhotoHandler>("auto.vehiclephoto");
         return services;
     }
 

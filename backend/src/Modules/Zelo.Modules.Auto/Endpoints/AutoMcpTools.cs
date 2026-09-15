@@ -157,10 +157,10 @@ internal sealed class AutoMcpTools
     [Description("Lista os veículos registados num household.")]
     public static async Task<List<VehicleResponse>> ListVehicles(
         [Description("Id do household cujos veículos se quer listar.")] Guid householdId,
-        AutoDbContext db, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+        AutoDbContext db, IObjectStorage storage, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
     {
         await EnsureMemberAsync(householdId, membership, httpContextAccessor, ct);
-        return await AutoEndpointHandlers.GetVehicles(householdId, db, ct);
+        return await AutoEndpointHandlers.GetVehicles(householdId, db, storage, ct);
     }
 
     [McpServerTool(Name = "get_vehicle_catalog", ReadOnly = true)]
@@ -172,11 +172,11 @@ internal sealed class AutoMcpTools
     public static async Task<VehicleResponse> GetVehicle(
         [Description("Id do household a que o veículo deve pertencer.")] Guid householdId,
         [Description("Id do veículo.")] Guid vehicleId,
-        AutoDbContext db, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+        AutoDbContext db, IObjectStorage storage, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
     {
         await EnsureMemberAsync(householdId, membership, httpContextAccessor, ct);
         var vehicle = await EnsureVehicleInHouseholdAsync(vehicleId, householdId, db, ct);
-        return VehicleResponse.From(vehicle);
+        return VehicleResponse.From(vehicle, storage);
     }
 
     [McpServerTool(Name = "create_vehicle", Destructive = false)]
@@ -199,7 +199,7 @@ internal sealed class AutoMcpTools
         [Description("Fim do período de seguro em vigor.")] DateOnly? insurancePeriodEnd,
         [Description("Prémio de seguro anual.")] decimal? insurancePremium,
         [Description("Data limite de pagamento do IUC.")] DateOnly? iucDueDate,
-        AutoDbContext db, IEventPublisher events, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+        AutoDbContext db, IEventPublisher events, IObjectStorage storage, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
     {
         await EnsureMemberAsync(householdId, membership, httpContextAccessor, ct);
 
@@ -207,7 +207,7 @@ internal sealed class AutoMcpTools
             category, brand, model, plate, vin, color, driver, odometer, registered, nextInspection,
             insurer, insurancePolicyNumber, insurancePeriodStart, insurancePeriodEnd, insurancePremium, iucDueDate);
         var vehicle = await AutoEndpointHandlers.CreateVehicleEntityAsync(householdId, request, db, events, ct);
-        return VehicleResponse.From(vehicle);
+        return VehicleResponse.From(vehicle, storage);
     }
 
     [McpServerTool(Name = "update_vehicle", Destructive = false, Idempotent = true)]
@@ -231,7 +231,7 @@ internal sealed class AutoMcpTools
         [Description("Fim do período de seguro em vigor.")] DateOnly? insurancePeriodEnd,
         [Description("Prémio de seguro anual.")] decimal? insurancePremium,
         [Description("Data limite de pagamento do IUC.")] DateOnly? iucDueDate,
-        AutoDbContext db, IEventPublisher events, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+        AutoDbContext db, IEventPublisher events, IObjectStorage storage, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
     {
         await EnsureMemberAsync(householdId, membership, httpContextAccessor, ct);
         await EnsureVehicleInHouseholdAsync(vehicleId, householdId, db, ct);
@@ -241,7 +241,7 @@ internal sealed class AutoMcpTools
             insurer, insurancePolicyNumber, insurancePeriodStart, insurancePeriodEnd, insurancePremium, iucDueDate);
         var vehicle = await AutoEndpointHandlers.UpdateVehicleEntityAsync(vehicleId, request, db, events, ct)
             ?? throw new McpException("Veículo não encontrado neste household.");
-        return VehicleResponse.From(vehicle);
+        return VehicleResponse.From(vehicle, storage);
     }
 
     [McpServerTool(Name = "archive_vehicle", Idempotent = true)]
@@ -250,14 +250,14 @@ internal sealed class AutoMcpTools
         [Description("Id do household a que o veículo deve pertencer.")] Guid householdId,
         [Description("Id do veículo a arquivar.")] Guid vehicleId,
         [Description("Novo estado: Vendido ou Abatido.")] VehicleStatus status,
-        AutoDbContext db, IEventPublisher events, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+        AutoDbContext db, IEventPublisher events, IObjectStorage storage, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
     {
         await EnsureMemberAsync(householdId, membership, httpContextAccessor, ct);
         await EnsureVehicleInHouseholdAsync(vehicleId, householdId, db, ct);
 
         var vehicle = await AutoEndpointHandlers.ArchiveVehicleEntityAsync(vehicleId, status, db, events, ct)
             ?? throw new McpException("Veículo não encontrado neste household.");
-        return VehicleResponse.From(vehicle);
+        return VehicleResponse.From(vehicle, storage);
     }
 
     [McpServerTool(Name = "get_vehicle_stats", ReadOnly = true)]

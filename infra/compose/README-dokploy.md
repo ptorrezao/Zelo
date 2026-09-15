@@ -98,6 +98,9 @@ aconteceria com um serviço normal.
 `Email__SmtpHost` / `Email__SmtpPort` só vai na **`api`** (só o módulo
 Identity, que corre lá, envia emails) — relay SMTP real em produção.
 
+`OpenAi__ApiKey` só vai no **`worker`** (só ele gera as fotos dos
+veículos, ver VehiclePhotoHandler) — chave de API da OpenAI.
+
 **`migrator`**: mesmas `ConnectionStrings__Zelo`, `FeatureFlags__*`, mais:
 
 | Variável | Valor |

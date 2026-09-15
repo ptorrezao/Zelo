@@ -51,8 +51,13 @@ const categoryOptions = [
 // nunca vai ter todas as marcas e modelos possiveis, e antes bloqueava o
 // utilizador se a dele nao estivesse listada. Servem so para sugerir, o
 // valor final pode ser qualquer texto.
-const brandSuggestions = computed(() => Object.keys(catalog.value))
-const modelSuggestions = computed(() => catalog.value[brand.value] ?? [])
+// O catalogo vem contextualizado por categoria (ver useVehicleCatalog) -
+// sem isto, escolher "Motociclo" continuava a sugerir marcas/modelos de
+// carro (e vice-versa) da mesma marca, ex. BMW misturava a Serie 1 com a
+// R1250GS.
+const brandsForCategory = computed(() => catalog.value[category.value] ?? {})
+const brandSuggestions = computed(() => Object.keys(brandsForCategory.value))
+const modelSuggestions = computed(() => brandsForCategory.value[brand.value] ?? [])
 const COLOR_SUGGESTIONS = [
   'Branco', 'Preto', 'Cinzento', 'Prata', 'Azul', 'Vermelho',
   'Verde', 'Amarelo', 'Castanho', 'Bege', 'Laranja', 'Roxo',

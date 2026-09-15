@@ -164,8 +164,8 @@ internal sealed class AutoMcpTools
     }
 
     [McpServerTool(Name = "get_vehicle_catalog", ReadOnly = true)]
-    [Description("Devolve o catálogo estático de marcas e modelos de veículos - referência, não dados de household.")]
-    public static IReadOnlyDictionary<string, string[]> GetVehicleCatalog() => VehicleCatalogLoader.Get();
+    [Description("Devolve o catálogo estático de marcas e modelos de veículos, por categoria (Ligeiros/Motociclos) - referência, não dados de household.")]
+    public static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string[]>> GetVehicleCatalog() => VehicleCatalogLoader.Get();
 
     [McpServerTool(Name = "get_vehicle", ReadOnly = true)]
     [Description("Obtém os detalhes de um veículo pelo id.")]

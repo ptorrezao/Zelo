@@ -21,14 +21,21 @@ public class AutoEndpointHandlersTests
         new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1), 350.00m, null);
 
     [Fact]
-    public void GetVehicleCatalog_DevolveMarcasEModelosDoJsonEmbutido()
+    public void GetVehicleCatalog_DevolveMarcasEModelosPorCategoria()
     {
         var result = AutoEndpointHandlers.GetVehicleCatalog();
 
-        var ok = Assert.IsType<Ok<IReadOnlyDictionary<string, string[]>>>(result);
+        var ok = Assert.IsType<Ok<IReadOnlyDictionary<string, IReadOnlyDictionary<string, string[]>>>>(result);
         Assert.True(ok.Value!.Count > 0);
-        Assert.Contains("Toyota", ok.Value.Keys);
-        Assert.Contains("Corolla", ok.Value["Toyota"]);
+        Assert.Contains("Ligeiros", ok.Value.Keys);
+        Assert.Contains("Toyota", ok.Value["Ligeiros"].Keys);
+        Assert.Contains("Corolla", ok.Value["Ligeiros"]["Toyota"]);
+        // BMW e Honda tem modelos diferentes em cada categoria - a mesma
+        // marca nao pode sugerir motas quando a categoria escolhida e
+        // Ligeiros, nem o contrario.
+        Assert.Contains("Motociclos", ok.Value.Keys);
+        Assert.Contains("R1250GS", ok.Value["Motociclos"]["BMW"]);
+        Assert.DoesNotContain("R1250GS", ok.Value["Ligeiros"]["BMW"]);
     }
 
     [Fact]

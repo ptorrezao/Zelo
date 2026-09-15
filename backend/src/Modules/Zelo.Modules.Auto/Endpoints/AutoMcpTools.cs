@@ -113,6 +113,44 @@ internal sealed class AutoMcpTools
         IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct) =>
         membership.GetMyHouseholdsAsync(RequireUserId(httpContextAccessor), ct);
 
+    [McpServerTool(Name = "create_household", Destructive = false)]
+    [Description("Cria um novo household, com o utilizador autenticado como Owner.")]
+    public static async Task<HouseholdSummary> CreateHousehold(
+        [Description("Nome do household, ex. \"Casa de férias\".")] string name,
+        IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+    {
+        try
+        {
+            return await membership.CreateHouseholdAsync(RequireUserId(httpContextAccessor), name, ct);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new McpException(ex.Message);
+        }
+    }
+
+    [McpServerTool(Name = "rename_household", Destructive = false, Idempotent = true)]
+    [Description("Renomeia um household existente. Só o Owner do household o pode fazer.")]
+    public static async Task<HouseholdSummary> RenameHousehold(
+        [Description("Id do household a renomear.")] Guid householdId,
+        [Description("Novo nome.")] string name,
+        IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+    {
+        try
+        {
+            return await membership.RenameHouseholdAsync(RequireUserId(httpContextAccessor), householdId, name, ct)
+                ?? throw new McpException("Household não encontrado.");
+        }
+        catch (ArgumentException ex)
+        {
+            throw new McpException(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new McpException(ex.Message);
+        }
+    }
+
     // ---- Veículos ----
 
     [McpServerTool(Name = "list_vehicles", ReadOnly = true)]

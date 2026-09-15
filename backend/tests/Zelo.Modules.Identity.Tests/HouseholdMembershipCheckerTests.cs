@@ -79,4 +79,73 @@ public class HouseholdMembershipCheckerTests
         Assert.True(item.IsDefault);
         Assert.Equal(1, await db.Households.CountAsync());
     }
+
+    [Fact]
+    public async Task CreateHouseholdAsync_CriaComUtilizadorComoOwner()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var checker = new HouseholdMembershipChecker(db);
+
+        var household = await checker.CreateHouseholdAsync(userId, "Casa de férias", CancellationToken.None);
+
+        Assert.Equal("Casa de férias", household.Name);
+        Assert.False(household.IsDefault);
+        Assert.True(await checker.IsMemberAsync(userId, household.Id, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateHouseholdAsync_NomeVazio_LancaArgumentException()
+    {
+        await using var db = NewDb();
+        var checker = new HouseholdMembershipChecker(db);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => checker.CreateHouseholdAsync(Guid.NewGuid(), "   ", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RenameHouseholdAsync_Owner_MudaNome()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var household = new Household { Id = Guid.NewGuid(), Name = "Casa", CreatedAt = DateTimeOffset.UtcNow };
+        db.Households.Add(household);
+        db.HouseholdMembers.Add(new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = household.Id, UserId = userId, Role = HouseholdRole.Owner, JoinedAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
+        var checker = new HouseholdMembershipChecker(db);
+
+        var result = await checker.RenameHouseholdAsync(userId, household.Id, "Família Torrezão", CancellationToken.None);
+
+        Assert.Equal("Família Torrezão", result!.Name);
+    }
+
+    [Fact]
+    public async Task RenameHouseholdAsync_Member_LancaUnauthorizedAccessException()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var household = new Household { Id = Guid.NewGuid(), Name = "Casa", CreatedAt = DateTimeOffset.UtcNow };
+        db.Households.Add(household);
+        db.HouseholdMembers.Add(new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = household.Id, UserId = userId, Role = HouseholdRole.Member, JoinedAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
+        var checker = new HouseholdMembershipChecker(db);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => checker.RenameHouseholdAsync(userId, household.Id, "Novo nome", CancellationToken.None));
+        Assert.Equal("Casa", (await db.Households.FindAsync(household.Id))!.Name);
+    }
+
+    [Fact]
+    public async Task RenameHouseholdAsync_UtilizadorNaoPertenceAoHousehold_DevolveNull()
+    {
+        await using var db = NewDb();
+        var household = new Household { Id = Guid.NewGuid(), Name = "Casa", CreatedAt = DateTimeOffset.UtcNow };
+        db.Households.Add(household);
+        db.HouseholdMembers.Add(new HouseholdMember { Id = Guid.NewGuid(), HouseholdId = household.Id, UserId = Guid.NewGuid(), Role = HouseholdRole.Owner, JoinedAt = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync();
+        var checker = new HouseholdMembershipChecker(db);
+
+        var result = await checker.RenameHouseholdAsync(Guid.NewGuid(), household.Id, "Novo nome", CancellationToken.None);
+
+        Assert.Null(result);
+    }
 }

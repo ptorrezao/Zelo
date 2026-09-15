@@ -99,6 +99,19 @@ public class HouseholdEndpointHandlersTests
     }
 
     [Fact]
+    public async Task CreateHousehold_NomeVazio_DevolveBadRequest()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+
+        var result = await HouseholdEndpointHandlers.CreateHousehold(
+            new HouseholdUpdateRequest("   "), PrincipalFor(userId), db, CancellationToken.None);
+
+        var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(400, statusResult.StatusCode);
+    }
+
+    [Fact]
     public async Task UpdateHousehold_Owner_MudaNome()
     {
         await using var db = NewDb();

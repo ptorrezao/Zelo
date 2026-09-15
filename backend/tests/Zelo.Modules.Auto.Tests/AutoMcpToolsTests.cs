@@ -34,13 +34,24 @@ public class AutoMcpToolsTests
 
     /// Membership permissiva ou restritiva de acordo com o Guid pedido -
     /// simples o suficiente para nao precisar de mocking framework.
-    private sealed class FakeMembershipChecker(bool isMember = true, IReadOnlyList<HouseholdSummary>? households = null) : IHouseholdMembershipChecker
+    private sealed class FakeMembershipChecker(
+        bool isMember = true,
+        IReadOnlyList<HouseholdSummary>? households = null,
+        HouseholdSummary? renameResult = null,
+        Exception? renameThrows = null,
+        Exception? createThrows = null) : IHouseholdMembershipChecker
     {
         public Task<bool> IsMemberAsync(Guid userId, Guid householdId, CancellationToken ct = default) =>
             Task.FromResult(isMember);
 
         public Task<IReadOnlyList<HouseholdSummary>> GetMyHouseholdsAsync(Guid userId, CancellationToken ct = default) =>
             Task.FromResult(households ?? []);
+
+        public Task<HouseholdSummary> CreateHouseholdAsync(Guid userId, string name, CancellationToken ct = default) =>
+            createThrows is null ? Task.FromResult(new HouseholdSummary(Guid.NewGuid(), name, false)) : throw createThrows;
+
+        public Task<HouseholdSummary?> RenameHouseholdAsync(Guid userId, Guid householdId, string name, CancellationToken ct = default) =>
+            renameThrows is null ? Task.FromResult(renameResult) : throw renameThrows;
     }
 
     private static Vehicle NewVehicle(Guid householdId, string brand = "Toyota", string model = "Corolla") => new()
@@ -71,6 +82,54 @@ public class AutoMcpToolsTests
     {
         await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.ListHouseholds(
             new FakeMembershipChecker(), NewHttpContextAccessor(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateHousehold_Sucesso_DevolveOHouseholdCriado()
+    {
+        var result = await AutoMcpTools.CreateHousehold(
+            "Casa de férias", new FakeMembershipChecker(), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal("Casa de férias", result.Name);
+    }
+
+    [Fact]
+    public async Task CreateHousehold_NomeInvalido_LancaMcpException()
+    {
+        var checker = new FakeMembershipChecker(createThrows: new ArgumentException("Nome do household inválido (entre 1 e 200 caracteres)."));
+
+        await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.CreateHousehold(
+            "", checker, NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RenameHousehold_Sucesso_DevolveOHouseholdRenomeado()
+    {
+        var householdId = Guid.NewGuid();
+        var checker = new FakeMembershipChecker(renameResult: new HouseholdSummary(householdId, "Novo nome", false));
+
+        var result = await AutoMcpTools.RenameHousehold(
+            householdId, "Novo nome", checker, NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal("Novo nome", result.Name);
+    }
+
+    [Fact]
+    public async Task RenameHousehold_NaoEncontrado_LancaMcpException()
+    {
+        var checker = new FakeMembershipChecker(renameResult: null);
+
+        await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.RenameHousehold(
+            Guid.NewGuid(), "Novo nome", checker, NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RenameHousehold_UtilizadorNaoEOwner_LancaMcpException()
+    {
+        var checker = new FakeMembershipChecker(renameThrows: new UnauthorizedAccessException("Só o Owner pode renomear este household."));
+
+        await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.RenameHousehold(
+            Guid.NewGuid(), "Novo nome", checker, NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None));
     }
 
     [Fact]

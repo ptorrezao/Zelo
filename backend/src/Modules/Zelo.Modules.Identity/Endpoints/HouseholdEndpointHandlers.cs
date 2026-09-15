@@ -35,70 +35,52 @@ internal static class HouseholdEndpointHandlers
 
     public static async Task<IResult> CreateHousehold(HouseholdUpdateRequest request, ClaimsPrincipal user, IdentityDbContext db, CancellationToken ct)
     {
-        var name = request.Name.Trim();
-        if (string.IsNullOrEmpty(name) || name.Length > 200)
-            return Results.BadRequest(new ErrorResponse("Nome do household inválido (entre 1 e 200 caracteres)."));
-
         var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))
             return Results.Unauthorized();
 
-        var response = await CreateHouseholdInternalAsync(userId, name, isDefault: false, db, ct);
+        HouseholdMember membership;
+        try
+        {
+            membership = await HouseholdProvisioning.CreateHouseholdAsync(userId, request.Name, isDefault: false, db, ct);
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new ErrorResponse(ex.Message));
+        }
+
+        var response = new HouseholdResponse(membership.HouseholdId, membership.Household.Name, membership.Role, membership.Household.IsDefault);
         return Results.Created($"/api/v1/households/{response.Id}", response);
-    }
-
-    private static async Task<HouseholdResponse> CreateHouseholdInternalAsync(
-        Guid userId, string name, bool isDefault, IdentityDbContext db, CancellationToken ct)
-    {
-        var household = new Household
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            CreatedAt = DateTimeOffset.UtcNow,
-            IsDefault = isDefault,
-        };
-        db.Households.Add(household);
-        db.HouseholdMembers.Add(new HouseholdMember
-        {
-            Id = Guid.NewGuid(),
-            HouseholdId = household.Id,
-            UserId = userId,
-            Role = HouseholdRole.Owner,
-            JoinedAt = DateTimeOffset.UtcNow,
-        });
-        await db.SaveChangesAsync(ct);
-
-        return new HouseholdResponse(household.Id, household.Name, HouseholdRole.Owner, household.IsDefault);
     }
 
     public static async Task<IResult> UpdateHousehold(
         Guid id, HouseholdUpdateRequest request, ClaimsPrincipal user, IdentityDbContext db, CancellationToken ct)
     {
-        var name = request.Name.Trim();
-        if (string.IsNullOrEmpty(name) || name.Length > 200)
-            return Results.BadRequest(new ErrorResponse("Nome do household inválido (entre 1 e 200 caracteres)."));
-
         var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))
             return Results.Unauthorized();
 
-        var membership = await db.HouseholdMembers
-            .Include(m => m.Household)
-            .FirstOrDefaultAsync(m => m.HouseholdId == id && m.UserId == userId, ct);
+        HouseholdMember? membership;
+        try
+        {
+            membership = await HouseholdProvisioning.RenameHouseholdAsync(userId, id, request.Name, db, ct);
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new ErrorResponse(ex.Message));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // So o Owner pode renomear - impede que um Member futuro (quando
+            // existir convite) altere as definicoes de outra pessoa.
+            return Results.Forbid();
+        }
 
-        // 404 para os dois casos (household inexistente vs. utilizador nao
-        // e membro) - nao confirmar a um utilizador nao autorizado que um
-        // household com aquele id sequer existe.
+        // 404 - nao confirmar a um utilizador nao autorizado que um
+        // household com aquele id sequer existe (o utilizador nao e
+        // membro, distinto do caso acima em que e membro mas nao Owner).
         if (membership is null)
             return Results.NotFound();
-
-        // So o Owner pode renomear - impede que um Member futuro (quando
-        // existir convite) altere as definicoes de outra pessoa.
-        if (membership.Role != HouseholdRole.Owner)
-            return Results.Forbid();
-
-        membership.Household.Name = name;
-        await db.SaveChangesAsync(ct);
 
         return Results.Ok(new HouseholdResponse(membership.HouseholdId, membership.Household.Name, membership.Role, membership.Household.IsDefault));
     }

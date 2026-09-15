@@ -131,6 +131,27 @@ describe('useVehicles', () => {
     expect(allVehicles.value.find(v => v.id === 'v1')?.maintenances).toHaveLength(1)
   })
 
+  it('trocar de veiculo selecionado carrega o detalhe do novo veiculo', async () => {
+    mockGet({
+      '/api/auto/vehicles': [apiVehicle({ id: 'v1' }), apiVehicle({ id: 'v2', brand: 'Honda' })],
+      '/api/auto/vehicles/{vehicleId}/maintenances': [],
+      '/api/auto/vehicles/{vehicleId}/documents': [],
+    })
+
+    const { useVehicles } = await import('./useVehicles')
+    const { selectedId, isLoaded } = useVehicles()
+    await vi.waitFor(() => expect(isLoaded.value).toBe(true))
+    await vi.waitFor(() => expect(client.GET).toHaveBeenCalledWith(
+      '/api/auto/vehicles/{vehicleId}/maintenances', { params: { path: { vehicleId: 'v1' } } },
+    ))
+
+    selectedId.value = 'v2'
+
+    await vi.waitFor(() => expect(client.GET).toHaveBeenCalledWith(
+      '/api/auto/vehicles/{vehicleId}/maintenances', { params: { path: { vehicleId: 'v2' } } },
+    ))
+  })
+
   it('addDocument adiciona o documento ao veiculo', async () => {
     mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
 

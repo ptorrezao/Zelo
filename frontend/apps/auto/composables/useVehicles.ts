@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRuntimeConfig } from '#app'
 import { useApiClient } from '@zelo/ui/composables/useApiClient'
 import type { components } from '@zelo/api-client'
@@ -182,9 +182,13 @@ export function useVehicles() {
   // porque os dados vinham sincronos.
   const photo = computed(() => selected.value ? photoFor(selected.value) : '')
 
-  if (selected.value) {
-    void loadVehicleDetail(client, selected.value)
-  }
+  // watch, nao um "if" direto - selected e computed, por isso um if aqui
+  // so corre uma vez, quando o composable e criado, e nunca mais quando o
+  // utilizador troca de veiculo depois (selectedId muda, mas nada volta a
+  // avaliar este bloco).
+  watch(selected, (vehicle) => {
+    if (vehicle) void loadVehicleDetail(client, vehicle)
+  }, { immediate: true })
 
   const visibleGroups = computed(() => {
     const term = query.value.trim().toLowerCase()

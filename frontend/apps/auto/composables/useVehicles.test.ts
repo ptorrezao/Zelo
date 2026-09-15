@@ -152,6 +152,49 @@ describe('useVehicles', () => {
     ))
   })
 
+  it('addMaintenance antes do detalhe carregar nao bloqueia o fetch seguinte (nao usa length como proxy)', async () => {
+    let resolveMaintenances: (value: { data: unknown[] }) => void
+    const maintenancesPromise = new Promise<{ data: unknown[] }>((resolve) => { resolveMaintenances = resolve })
+
+    client.GET.mockImplementation((path: string) => {
+      if (path === '/api/v1/households/me') return Promise.resolve({ data: [DEFAULT_HOUSEHOLD] })
+      if (path === '/api/auto/vehicles') return Promise.resolve({ data: [apiVehicle({ id: 'v1' })] })
+      if (path === '/api/auto/vehicles/{vehicleId}/maintenances') return maintenancesPromise
+      return Promise.resolve({ data: [] })
+    })
+    client.POST.mockResolvedValue({
+      data: {
+        id: 'novo', vehicleId: 'v1', date: '2026-02-01', odometer: 13000, workshop: 'Oficina Y',
+        description: 'Adicionada durante o carregamento', type: 'Preventiva', cost: 40, invoiceNumber: null, invoiceDate: null, items: [],
+      },
+    })
+
+    const { useVehicles } = await import('./useVehicles')
+    const { addMaintenance, findMaintenance, allVehicles, isLoaded } = useVehicles()
+    await vi.waitFor(() => expect(isLoaded.value).toBe(true))
+
+    // O GET de manutencoes ainda esta pendente - adiciona uma manutencao
+    // antes dele resolver, o que faz vehicle.maintenances.length passar
+    // de 0 para 1 (o proxy antigo confundia isto com "ja carregado").
+    await addMaintenance('v1', {
+      date: '01/02/2026', type: 'preventiva', workshop: 'Oficina Y', description: 'Adicionada durante o carregamento', cost: '40,00', odometer: '13 000 km',
+    })
+    expect(allVehicles.value.find(v => v.id === 'v1')?.maintenances).toHaveLength(1)
+
+    resolveMaintenances!({
+      data: [{
+        id: 'historico', vehicleId: 'v1', date: '2025-01-01', odometer: 5000, workshop: 'Oficina Antiga',
+        description: 'Revisao antiga', type: 'Preventiva', cost: 60, invoiceNumber: null, invoiceDate: null, items: [],
+      }],
+    })
+
+    // findMaintenance forca outro loadVehicleDetail - se a guarda antiga
+    // (length > 0) ainda existisse, isto seria um no-op e o item
+    // historico nunca apareceria.
+    const found = await findMaintenance('historico')
+    expect(found?.maintenance.workshop).toBe('Oficina Antiga')
+  })
+
   it('addDocument adiciona o documento ao veiculo', async () => {
     mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
 

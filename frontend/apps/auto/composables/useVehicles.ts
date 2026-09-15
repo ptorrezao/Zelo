@@ -97,6 +97,14 @@ const selectedId = ref('')
 const isLoaded = ref(false)
 let loadPromise: Promise<void> | null = null
 
+// Marca por vehicleId (nao pelo tamanho dos arrays de detalhe - esse
+// proxy parte-se assim que algo insere um item antes do fetch real
+// acontecer, ex. addMaintenance). detailPromises tambem deduplica pedidos
+// simultaneos quando varios componentes chamam loadVehicleDetail para o
+// mesmo veiculo em paralelo.
+const detailLoaded = new Set<string>()
+const detailPromises = new Map<string, Promise<void>>()
+
 // Os households do utilizador atual - ja nao ha um ID fixo para toda a
 // app (GET /api/v1/households/me garante que existe sempre pelo menos
 // um, criando-o na primeira chamada se for preciso). Por omissao usa-se
@@ -141,15 +149,27 @@ async function loadVehicles(client: ReturnType<typeof useApiClient>) {
 }
 
 async function loadVehicleDetail(client: ReturnType<typeof useApiClient>, vehicle: Vehicle) {
-  if (vehicle.maintenances.length > 0 || vehicle.documents.length > 0) return // ja carregado
+  if (detailLoaded.has(vehicle.id)) return
+  const inFlight = detailPromises.get(vehicle.id)
+  if (inFlight) return inFlight
 
-  const [maintenances, documents] = await Promise.all([
-    client.GET('/api/auto/vehicles/{vehicleId}/maintenances', { params: { path: { vehicleId: vehicle.id } } }),
-    client.GET('/api/auto/vehicles/{vehicleId}/documents', { params: { path: { vehicleId: vehicle.id } } }),
-  ])
+  const promise = (async () => {
+    const [maintenances, documents] = await Promise.all([
+      client.GET('/api/auto/vehicles/{vehicleId}/maintenances', { params: { path: { vehicleId: vehicle.id } } }),
+      client.GET('/api/auto/vehicles/{vehicleId}/documents', { params: { path: { vehicleId: vehicle.id } } }),
+    ])
 
-  vehicle.maintenances = (maintenances.data ?? []).map(mapMaintenanceFromApi)
-  vehicle.documents = (documents.data ?? []).map(mapDocumentFromApi)
+    vehicle.maintenances = (maintenances.data ?? []).map(mapMaintenanceFromApi)
+    vehicle.documents = (documents.data ?? []).map(mapDocumentFromApi)
+    detailLoaded.add(vehicle.id)
+  })()
+
+  detailPromises.set(vehicle.id, promise)
+  try {
+    await promise
+  } finally {
+    detailPromises.delete(vehicle.id)
+  }
 }
 
 export function useVehicles() {
@@ -162,6 +182,12 @@ export function useVehicles() {
   // Forca um novo pedido a API, ignorando o cache do loadPromise - usado
   // depois de uma importacao de veiculos, que nao passa por addVehicle().
   function refresh() {
+    // loadVehicles substitui os objetos Vehicle por novos (mesmos ids,
+    // arrays de detalhe vazios) - sem isto, loadVehicleDetail via
+    // detailLoaded pensava que o detalhe do veiculo ja estava carregado e
+    // nunca voltava a pedir nada, deixando maintenances/documents vazios.
+    detailLoaded.clear()
+    detailPromises.clear()
     loadPromise = loadVehicles(client)
     return loadPromise
   }

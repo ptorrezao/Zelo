@@ -206,8 +206,15 @@ internal sealed class AutoMcpTools
         var request = new VehicleUpsertRequest(
             category, brand, model, plate, vin, color, driver, odometer, registered, nextInspection,
             insurer, insurancePolicyNumber, insurancePeriodStart, insurancePeriodEnd, insurancePremium, iucDueDate);
-        var vehicle = await AutoEndpointHandlers.CreateVehicleEntityAsync(householdId, request, db, events, ct);
-        return VehicleResponse.From(vehicle, storage);
+        try
+        {
+            var vehicle = await AutoEndpointHandlers.CreateVehicleEntityAsync(householdId, request, db, events, ct);
+            return VehicleResponse.From(vehicle, storage);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new McpException(ex.Message);
+        }
     }
 
     [McpServerTool(Name = "update_vehicle", Destructive = false, Idempotent = true)]
@@ -239,9 +246,16 @@ internal sealed class AutoMcpTools
         var request = new VehicleUpsertRequest(
             category, brand, model, plate, vin, color, driver, odometer, registered, nextInspection,
             insurer, insurancePolicyNumber, insurancePeriodStart, insurancePeriodEnd, insurancePremium, iucDueDate);
-        var vehicle = await AutoEndpointHandlers.UpdateVehicleEntityAsync(vehicleId, request, db, events, ct)
-            ?? throw new McpException("Veículo não encontrado neste household.");
-        return VehicleResponse.From(vehicle, storage);
+        try
+        {
+            var vehicle = await AutoEndpointHandlers.UpdateVehicleEntityAsync(vehicleId, request, db, events, ct)
+                ?? throw new McpException("Veículo não encontrado neste household.");
+            return VehicleResponse.From(vehicle, storage);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new McpException(ex.Message);
+        }
     }
 
     [McpServerTool(Name = "archive_vehicle", Idempotent = true)]

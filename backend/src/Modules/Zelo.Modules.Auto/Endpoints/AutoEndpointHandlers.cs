@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Zelo.Contracts;
 using Zelo.Messaging;
 using Zelo.Modules.Auto.Application;
@@ -30,17 +31,27 @@ internal static class AutoEndpointHandlers
     public static async Task<IResult> CreateVehicle(
         Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, IObjectStorage storage, CancellationToken ct)
     {
-        var vehicle = await CreateVehicleEntityAsync(householdId, request, db, events, ct);
-        return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle, storage));
+        try
+        {
+            var vehicle = await CreateVehicleEntityAsync(householdId, request, db, events, ct);
+            return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle, storage));
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
     }
 
     /// Construcao/persistencia partilhada entre CreateVehicle, ConfirmImport
     /// e AutoMcpTools.CreateVehicle - todas precisam exatamente da mesma
-    /// logica (entidade + sync de inspecao + eventos), so a primeira devolve
-    /// um IResult.
+    /// logica (entidade + sync de inspecao + eventos + validacao), so a
+    /// primeira devolve um IResult. Lanca ArgumentException (ver
+    /// VehicleValidation) - quem chama decide como traduzir isso.
     internal static async Task<Vehicle> CreateVehicleEntityAsync(
         Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
     {
+        VehicleValidation.Validate(request);
+
         var vehicle = new Vehicle
         {
             Id = Guid.NewGuid(),
@@ -65,7 +76,7 @@ internal static class AutoEndpointHandlers
         };
 
         db.Vehicles.Add(vehicle);
-        await db.SaveChangesAsync(ct);
+        await SaveOrThrowOnDuplicatePlateAsync(db, ct);
 
         await events.PublishAsync(VehicleEvents.Created(vehicle), ct);
         if (VehicleEvents.SyncInspectionObligation(vehicle) is { } obligationEvent)
@@ -83,18 +94,29 @@ internal static class AutoEndpointHandlers
     public static async Task<IResult> UpdateVehicle(
         Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, IObjectStorage storage, CancellationToken ct)
     {
-        var vehicle = await UpdateVehicleEntityAsync(id, request, db, events, ct);
-        return vehicle is null ? Results.NotFound() : Results.Ok(VehicleResponse.From(vehicle, storage));
+        try
+        {
+            var vehicle = await UpdateVehicleEntityAsync(id, request, db, events, ct);
+            return vehicle is null ? Results.NotFound() : Results.Ok(VehicleResponse.From(vehicle, storage));
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
     }
 
     /// Partilhada com AutoMcpTools.UpdateVehicle - devolve null (em vez de
-    /// IResult) para quem chama nao depender de tipos de Minimal API.
+    /// IResult) para quem chama nao depender de tipos de Minimal API. Lanca
+    /// ArgumentException (ver VehicleValidation) - quem chama decide como
+    /// traduzir isso.
     internal static async Task<Vehicle?> UpdateVehicleEntityAsync(
         Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
     {
         var vehicle = await db.Vehicles.FindAsync([id], ct);
         if (vehicle is null)
             return null;
+
+        VehicleValidation.Validate(request);
 
         // Mudar a cor torna a foto gerada (presa a cor da criacao) errada -
         // apaga a referencia e volta a publicar AssetCreated para o
@@ -127,7 +149,7 @@ internal static class AutoEndpointHandlers
             vehicle.PhotoObjectKey = null;
 
         var obligationEvent = VehicleEvents.SyncInspectionObligation(vehicle);
-        await db.SaveChangesAsync(ct);
+        await SaveOrThrowOnDuplicatePlateAsync(db, ct);
 
         if (obligationEvent is not null)
             await PublishObligationEventAsync(events, obligationEvent, ct);
@@ -135,6 +157,21 @@ internal static class AutoEndpointHandlers
             await events.PublishAsync(VehicleEvents.Created(vehicle), ct);
 
         return vehicle;
+    }
+
+    /// A unicidade de (HouseholdId, Plate) e garantida por indice na BD
+    /// (ver VehicleConfiguration) - sem isto, duplicar uma matricula dava
+    /// um DbUpdateException/500 em vez de uma mensagem clara.
+    private static async Task SaveOrThrowOnDuplicatePlateAsync(AutoDbContext db, CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            throw new ArgumentException("Matrícula já existe neste household.");
+        }
     }
 
     public static async Task<IResult> DeleteVehicle(
@@ -247,8 +284,18 @@ internal static class AutoEndpointHandlers
                 candidate.Insurer, candidate.InsurancePolicyNumber, candidate.InsurancePeriodStart,
                 candidate.InsurancePeriodEnd, candidate.InsurancePremium, candidate.IucDueDate);
 
-            await CreateVehicleEntityAsync(householdId, upsertRequest, db, events, ct);
-            results.Add(new ImportResultItem(candidate.Plate, true, null));
+            try
+            {
+                await CreateVehicleEntityAsync(householdId, upsertRequest, db, events, ct);
+                results.Add(new ImportResultItem(candidate.Plate, true, null));
+            }
+            catch (ArgumentException ex)
+            {
+                // Um veiculo invalido (ex.: sem cor, um campo que se
+                // tornou obrigatorio depois de outro ambiente ja o ter
+                // criado sem ele) nao deve parar o resto do lote.
+                results.Add(new ImportResultItem(candidate.Plate, false, ex.Message));
+            }
         }
 
         var importedCount = results.Count(r => r.Imported);

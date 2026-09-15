@@ -269,7 +269,7 @@ export function useVehicles() {
 
   async function addVehicle(input: VehicleFormInput): Promise<Vehicle> {
     const householdId = await resolveHouseholdId(client)
-    const { data } = await client.POST('/api/auto/vehicles', {
+    const { data, error } = await client.POST('/api/auto/vehicles', {
       params: { query: { householdId } },
       body: {
         category: input.category,
@@ -290,16 +290,17 @@ export function useVehicles() {
         iucDueDate: toIso(input.iucDueDate),
       },
     })
+    if (!data) throw new Error(extractApiErrorMessage(error, 'Não foi possível criar o veículo.'))
 
-    const vehicle = mapVehicleFromApi(data!)
+    const vehicle = mapVehicleFromApi(data)
     const group = groups.value.find(g => g.label === input.category)
     group?.items.push(vehicle)
     if (!vehicle.photoUrl) void pollForPhoto(vehicle.id, client)
     return vehicle
   }
 
-  async function updateVehicle(vehicleId: string, input: VehicleFormInput): Promise<Vehicle | undefined> {
-    const { data } = await client.PUT('/api/auto/vehicles/{id}', {
+  async function updateVehicle(vehicleId: string, input: VehicleFormInput): Promise<Vehicle> {
+    const { data, error } = await client.PUT('/api/auto/vehicles/{id}', {
       params: { path: { id: vehicleId } },
       body: {
         category: input.category,
@@ -320,7 +321,7 @@ export function useVehicles() {
         iucDueDate: toIso(input.iucDueDate),
       },
     })
-    if (!data) return undefined
+    if (!data) throw new Error(extractApiErrorMessage(error, 'Não foi possível guardar as alterações.'))
 
     const updated = mapVehicleFromApi(data)
     const currentCategory = categoryOf(vehicleId)
@@ -398,6 +399,18 @@ export function useVehicles() {
     addMaintenance,
     addDocument,
   }
+}
+
+// O backend devolve erros de validacao/negocio como { error: "mensagem" }
+// (ver AutoEndpointHandlers, ex. "Matrícula já existe"). Sem schema
+// tipado para respostas de erro, "error" vem como unknown - le-se a
+// mensagem manualmente, com um fallback generico se a forma nao bater
+// certo (ex. erro de rede, sem corpo JSON nenhum).
+function extractApiErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === 'object' && 'error' in error && typeof (error as { error: unknown }).error === 'string') {
+    return (error as { error: string }).error
+  }
+  return fallback
 }
 
 function slugify(value: string) {

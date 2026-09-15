@@ -124,6 +124,36 @@ describe('useVehicles', () => {
     expect(motos?.items.some(v => v.id === 'novo')).toBe(true)
   })
 
+  it('addVehicle lanca a mensagem de erro do backend (ex. matricula duplicada) em vez de rebentar', async () => {
+    client.POST.mockResolvedValue({ error: { error: 'Matrícula já existe neste household.' } })
+
+    const { useVehicles } = await import('./useVehicles')
+    const { addVehicle, groups, isLoaded } = useVehicles()
+    await vi.waitFor(() => expect(isLoaded.value).toBe(true))
+
+    await expect(addVehicle({
+      category: 'Ligeiros', brand: 'Toyota', model: 'Corolla', plate: 'AA-00-BB', vin: 'VIN', color: 'Branco',
+      odometer: '0 km', registered: '01/01/2026', nextInspection: '', insurer: '',
+      insurancePolicyNumber: '', insurancePeriodStart: '', insurancePeriodEnd: '', insurancePremium: '', iucDueDate: '',
+    })).rejects.toThrow('Matrícula já existe neste household.')
+    expect(groups.value.every(g => g.items.every(v => v.plate !== 'AA-00-BB'))).toBe(true)
+  })
+
+  it('updateVehicle lanca a mensagem de erro do backend em vez de fechar silenciosamente', async () => {
+    mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
+    client.PUT.mockResolvedValue({ error: { error: 'Cor é obrigatória.' } })
+
+    const { useVehicles } = await import('./useVehicles')
+    const { updateVehicle, isLoaded } = useVehicles()
+    await vi.waitFor(() => expect(isLoaded.value).toBe(true))
+
+    await expect(updateVehicle('v1', {
+      category: 'Ligeiros', brand: 'Toyota', model: 'Corolla', plate: 'AA-00-BB', vin: 'VIN123', color: '',
+      odometer: '12 000 km', registered: '01/01/2020', nextInspection: '', insurer: '',
+      insurancePolicyNumber: '', insurancePeriodStart: '', insurancePeriodEnd: '', insurancePremium: '', iucDueDate: '',
+    })).rejects.toThrow('Cor é obrigatória.')
+  })
+
   it('addMaintenance adiciona a manutencao ao veiculo', async () => {
     mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
     client.POST.mockResolvedValue({

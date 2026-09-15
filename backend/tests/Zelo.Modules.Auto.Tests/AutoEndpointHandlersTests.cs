@@ -168,6 +168,36 @@ public class AutoEndpointHandlersTests
     }
 
     [Fact]
+    public async Task CreateVehicle_SemCor_DevolveBadRequestSemGuardarNada()
+    {
+        await using var db = NewDb();
+        var events = new FakeEventPublisher();
+        var request = NewVehicleRequest() with { Color = null };
+
+        var result = await AutoEndpointHandlers.CreateVehicle(Guid.NewGuid(), request, db, events, new FakeObjectStorage(), CancellationToken.None);
+
+        Assert.Contains("Cor", GetErrorMessage(result));
+        Assert.Equal(0, await db.Vehicles.CountAsync());
+        Assert.Empty(events.Published);
+    }
+
+    [Fact]
+    public async Task UpdateVehicle_QuilometragemNegativa_DevolveBadRequestSemAlterarNada()
+    {
+        await using var db = NewDb();
+        var events = new FakeEventPublisher();
+        var vehicle = NewVehicle(Guid.NewGuid(), "Toyota", "Corolla");
+        db.Vehicles.Add(vehicle);
+        await db.SaveChangesAsync();
+        var request = NewVehicleRequest() with { Odometer = -1 };
+
+        var result = await AutoEndpointHandlers.UpdateVehicle(vehicle.Id, request, db, events, new FakeObjectStorage(), CancellationToken.None);
+
+        Assert.Contains("Quilometragem", GetErrorMessage(result));
+        Assert.Equal(0, (await db.Vehicles.FindAsync(vehicle.Id))!.Odometer); // NewVehicle por omissao
+    }
+
+    [Fact]
     public async Task DeleteVehicle_MarcaStatusEPublicaArchived()
     {
         await using var db = NewDb();
@@ -503,6 +533,29 @@ public class AutoEndpointHandlersTests
         Assert.Equal(1, ok.Value!.ImportedCount);
         Assert.Equal(2, ok.Value.SkippedCount);
         Assert.Equal(2, await db.Vehicles.CountAsync(v => v.HouseholdId == destino));
+    }
+
+    [Fact]
+    public async Task ConfirmImport_CandidatoInvalido_MarcaFalhaSemPararOLote()
+    {
+        await using var db = NewDb();
+        var events = new FakeEventPublisher();
+        var destino = Guid.NewGuid();
+        var request = new ImportConfirmRequest([
+            NewCandidate("AA-00-BB") with { Color = null }, // invalido - sem cor
+            NewCandidate("CC-11-DD"), // valido, nao pode ser afetado pelo anterior
+        ]);
+
+        var result = await AutoEndpointHandlers.ConfirmImport(destino, request, db, events, CancellationToken.None);
+
+        var ok = Assert.IsType<Ok<ImportConfirmResponse>>(result);
+        Assert.Equal(1, ok.Value!.ImportedCount);
+        Assert.Equal(1, ok.Value.SkippedCount);
+        var failed = ok.Value.Items.Single(r => r.Plate == "AA-00-BB");
+        Assert.False(failed.Imported);
+        Assert.Contains("Cor", failed.SkipReason);
+        Assert.True(ok.Value.Items.Single(r => r.Plate == "CC-11-DD").Imported);
+        Assert.Equal(1, await db.Vehicles.CountAsync(v => v.HouseholdId == destino));
     }
 
     private static Vehicle NewVehicle(Guid householdId, string brand, string model) => new()

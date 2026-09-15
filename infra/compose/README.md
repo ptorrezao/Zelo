@@ -62,9 +62,6 @@ Depois, http://localhost:3909 — sem login, gestão de buckets/chaves e
 navegador de objetos (incluindo pré-visualização de imagens, ex.
 `zelo-documents/vehicles/<id>/photo.png`) já prontos.
 
-`infra/compose/s3-downloads/` é só um scratch local (git-ignored) — pode
-ser apagado a qualquer momento.
-
 ## Mailhog (`mailhog`) — captura de emails
 
 | | |

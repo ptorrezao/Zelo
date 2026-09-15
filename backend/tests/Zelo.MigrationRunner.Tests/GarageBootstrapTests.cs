@@ -12,10 +12,10 @@ public class GarageBootstrapTests
     {
         var handler = new RoutingFakeHttpMessageHandler((method, path) => (method.Method, path) switch
         {
-            ("GET", "/v1/status") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, StatusJson),
+            ("GET", "/v2/GetClusterStatus") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, StatusJson),
             ("GET", "/v1/layout") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, """{"version":1,"roles":[]}"""),
-            ("POST", "/v1/layout") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "{}"),
-            ("POST", "/v1/layout/apply") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "{}"),
+            ("POST", "/v2/UpdateClusterLayout") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "{}"),
+            ("POST", "/v2/ApplyClusterLayout") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, "{}"),
             ("GET", var p) when p.StartsWith("/v1/bucket?globalAlias=") =>
                 RoutingFakeHttpMessageHandler.Json(HttpStatusCode.NotFound, "{}"),
             ("POST", "/v1/bucket") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, """{"id":"bucket-1"}"""),
@@ -29,8 +29,8 @@ public class GarageBootstrapTests
         await GarageBootstrap.RunAsync(
             "http://garage.local", "admin-token", "zelo-bucket", "access-key", "secret-key", "zelo-api-key", handler);
 
-        Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/layout");
-        Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/layout/apply");
+        Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v2/UpdateClusterLayout");
+        Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v2/ApplyClusterLayout");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/bucket");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/key/import");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/bucket/allow");
@@ -41,7 +41,7 @@ public class GarageBootstrapTests
     {
         var handler = new RoutingFakeHttpMessageHandler((method, path) => (method.Method, path) switch
         {
-            ("GET", "/v1/status") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, StatusJson),
+            ("GET", "/v2/GetClusterStatus") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, StatusJson),
             ("GET", "/v1/layout") => RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, """{"version":1,"roles":[{"id":"node1"}]}"""),
             ("GET", var p) when p.StartsWith("/v1/bucket?globalAlias=") =>
                 RoutingFakeHttpMessageHandler.Json(HttpStatusCode.OK, """{"id":"bucket-1"}"""),
@@ -54,7 +54,7 @@ public class GarageBootstrapTests
         await GarageBootstrap.RunAsync(
             "http://garage.local", "admin-token", "zelo-bucket", "access-key", "secret-key", "zelo-api-key", handler);
 
-        Assert.DoesNotContain(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/layout");
+        Assert.DoesNotContain(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v2/UpdateClusterLayout");
         Assert.DoesNotContain(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/key/import");
         Assert.Contains(handler.Requests, r => r.Method.Method == "POST" && r.Path == "/v1/bucket/allow");
     }

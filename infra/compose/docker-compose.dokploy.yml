@@ -34,8 +34,17 @@ services:
   # Armazenamento de documentos (S3-compatible). Layout/bucket/chave sao
   # criados pelo migrator (ver GarageBootstrap.cs) - precisa de alcancar
   # este servico pelo hostname "garage" (ver Network na Application dele).
+  #
+  # ATENCAO ao subir de v1.0.1 para v2.0.0 num ambiente com dados reais:
+  # e uma migracao "breaking" da API admin (GarageBootstrap.cs ja trata
+  # disso - so GetClusterStatus/UpdateClusterLayout/ApplyClusterLayout
+  # mudaram para /v2/), mas os dados em si tambem exigem cuidado - fazer
+  # backup ANTES (ex.: "garage meta snapshot --all", ou copiar
+  # metadata_dir enquanto o no esta parado) e so depois trocar a imagem,
+  # conforme o guia oficial:
+  # https://garagehq.deuxfleurs.fr/documentation/working-documents/migration-2/
   garage:
-    image: dxflrs/garage:v1.0.1
+    image: dxflrs/garage:v2.0.0
     networks: [dokploy-network]
     volumes:
       - ../docker/garage/garage.toml:/etc/garage.toml:ro

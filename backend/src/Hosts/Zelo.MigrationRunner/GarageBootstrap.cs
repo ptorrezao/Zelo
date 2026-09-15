@@ -9,6 +9,14 @@ namespace Zelo.MigrationRunner;
 /// a usar. Sem isto o modulo Auto nao consegue gerar URLs de upload -
 /// antes disto era um passo manual documentado em comentario no
 /// docker-compose.yml.
+///
+/// Mistura API admin v1 e v2 de proposito: o Garage 2.0.0 removeu
+/// especificamente GetClusterStatus e UpdateClusterLayout/ApplyClusterLayout
+/// da v1 ("endpoint is no longer supported"), mas manteve tudo o resto
+/// (/v1/bucket, /v1/key/import, /v1/bucket/allow) a funcionar identico -
+/// so se mudou o que estava mesmo partido, confirmado a testar contra um
+/// Garage v2.0.0 real. A v1 continua "deprecated" nesta versao (nao
+/// removida) - se um Garage futuro a tirar de vez, e so migrar o resto.
 internal static class GarageBootstrap
 {
     public static async Task RunAsync(
@@ -38,7 +46,7 @@ internal static class GarageBootstrap
         {
             try
             {
-                var status = await client.GetFromJsonAsync<StatusResponse>("/v1/status", ct);
+                var status = await client.GetFromJsonAsync<StatusResponse>("/v2/GetClusterStatus", ct);
                 var nodeId = status?.Nodes.FirstOrDefault(n => n.IsUp)?.Id;
                 if (nodeId is not null)
                     return nodeId;
@@ -62,16 +70,13 @@ internal static class GarageBootstrap
         if (layout.Roles.Any(r => r.Id == nodeId))
             return; // ja tem role atribuida - nada a fazer
 
-        var stageBody = JsonSerializer.SerializeToUtf8Bytes(new[]
+        var stageResponse = await client.PostAsJsonAsync("/v2/UpdateClusterLayout", new
         {
-            new { id = nodeId, zone = "dc1", capacity = 1_000_000_000L, tags = Array.Empty<string>() },
-        });
-        using var stageContent = new ByteArrayContent(stageBody);
-        stageContent.Headers.ContentType = new("application/json");
-        var stageResponse = await client.PostAsync("/v1/layout", stageContent, ct);
+            roles = new[] { new { id = nodeId, zone = "dc1", capacity = 1_000_000_000L, tags = Array.Empty<string>() } },
+        }, ct);
         await EnsureSuccessAsync(stageResponse, ct);
 
-        var applyResponse = await client.PostAsJsonAsync("/v1/layout/apply", new { version = layout.Version + 1 }, ct);
+        var applyResponse = await client.PostAsJsonAsync("/v2/ApplyClusterLayout", new { version = layout.Version + 1 }, ct);
         await EnsureSuccessAsync(applyResponse, ct);
     }
 

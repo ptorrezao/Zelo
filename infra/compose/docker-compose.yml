@@ -118,7 +118,12 @@ services:
   # bucket e chave sao criados pelo migrator (ver GarageBootstrap.cs) -
   # nao e preciso nenhum passo manual.
   garage:
-    image: dxflrs/garage:v1.0.1
+    # v2.0.0: a API admin v1 continua a responder na maioria dos
+    # endpoints ("deprecated", nao removida) - so GetClusterStatus e
+    # UpdateClusterLayout/ApplyClusterLayout deixaram de existir em v1,
+    # por isso GarageBootstrap.cs usa v2 so nesses tres (confirmado a
+    # testar contra um Garage v2.0.0 real).
+    image: dxflrs/garage:v2.0.0
     volumes:
       - ../docker/garage/garage.toml:/etc/garage.toml:ro
       - garagemeta:/var/lib/garage/meta

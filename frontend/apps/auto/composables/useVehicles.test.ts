@@ -209,6 +209,39 @@ describe('useVehicles', () => {
     expect(found?.maintenance.workshop).toBe('Oficina Antiga')
   })
 
+  it('pollForPhoto atualiza vehicle.photoUrl quando a foto fica pronta em background', async () => {
+    vi.useFakeTimers()
+    try {
+      mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1', photoUrl: null })] })
+      client.PUT.mockResolvedValue({ data: apiVehicle({ id: 'v1', color: 'Azul', photoUrl: null }) })
+      client.GET.mockImplementation((path: string, opts?: { params?: { path?: { id?: string } } }) => {
+        if (path === '/api/v1/households/me') return Promise.resolve({ data: [DEFAULT_HOUSEHOLD] })
+        if (path === '/api/auto/vehicles') return Promise.resolve({ data: [apiVehicle({ id: 'v1', photoUrl: null })] })
+        if (path === '/api/auto/vehicles/{id}' && opts?.params?.path?.id === 'v1') {
+          return Promise.resolve({ data: apiVehicle({ id: 'v1', photoUrl: 'https://storage.local/v1/photo.png' }) })
+        }
+        return Promise.resolve({ data: [] })
+      })
+
+      const { useVehicles } = await import('./useVehicles')
+      const { updateVehicle, allVehicles, isLoaded } = useVehicles()
+      await vi.waitFor(() => expect(isLoaded.value).toBe(true), { timeout: 5000 })
+
+      await updateVehicle('v1', {
+        category: 'Ligeiros', brand: 'Toyota', model: 'Corolla', plate: 'AA-00-BB', vin: 'VIN123', color: 'Azul',
+        odometer: '12 000 km', registered: '01/01/2020', nextInspection: '', insurer: '',
+        insurancePolicyNumber: '', insurancePeriodStart: '', insurancePeriodEnd: '', insurancePremium: '', iucDueDate: '',
+      })
+      expect(allVehicles.value.find(v => v.id === 'v1')?.photoUrl).toBeNull()
+
+      await vi.advanceTimersByTimeAsync(4000)
+
+      expect(allVehicles.value.find(v => v.id === 'v1')?.photoUrl).toBe('https://storage.local/v1/photo.png')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('addDocument adiciona o documento ao veiculo', async () => {
     mockGet({ '/api/auto/vehicles': [apiVehicle({ id: 'v1' })] })
 

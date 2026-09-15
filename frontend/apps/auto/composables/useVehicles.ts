@@ -246,6 +246,27 @@ export function useVehicles() {
     return groups.value.find(g => g.items.some(v => v.id === vehicleId))?.label as 'Motociclos' | 'Ligeiros' | undefined
   }
 
+  // A foto (criacao, ou regeneracao ao mudar a cor - ver plano de geracao
+  // automatica) demora dezenas de segundos a gerar no Worker, em
+  // background - o pedido de create/update ja volta sem ela. Em vez de
+  // obrigar a um refresh manual, pergunta-se de vez em quando ate
+  // aparecer (ou desistir). Muta o vehicle.photoUrl diretamente -
+  // groups e reativo, o <img> atualiza sozinho quando chegar.
+  async function pollForPhoto(vehicleId: string, client: ReturnType<typeof useApiClient>) {
+    for (let attempt = 0; attempt < 15; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 4000))
+
+      const vehicle = allVehicles.value.find(v => v.id === vehicleId)
+      if (!vehicle || vehicle.photoUrl) return // saiu da lista, ou ja chegou por outra via
+
+      const { data } = await client.GET('/api/auto/vehicles/{id}', { params: { path: { id: vehicleId } } })
+      if (data?.photoUrl) {
+        vehicle.photoUrl = data.photoUrl
+        return
+      }
+    }
+  }
+
   async function addVehicle(input: VehicleFormInput): Promise<Vehicle> {
     const householdId = await resolveHouseholdId(client)
     const { data } = await client.POST('/api/auto/vehicles', {
@@ -273,6 +294,7 @@ export function useVehicles() {
     const vehicle = mapVehicleFromApi(data!)
     const group = groups.value.find(g => g.label === input.category)
     group?.items.push(vehicle)
+    if (!vehicle.photoUrl) void pollForPhoto(vehicle.id, client)
     return vehicle
   }
 
@@ -312,6 +334,7 @@ export function useVehicles() {
 
     const toGroup = groups.value.find(g => g.label === input.category)
     toGroup?.items.push(updated)
+    if (!updated.photoUrl) void pollForPhoto(updated.id, client)
     return updated
   }
 

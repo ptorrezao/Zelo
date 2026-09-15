@@ -34,10 +34,13 @@ public class AutoMcpToolsTests
 
     /// Membership permissiva ou restritiva de acordo com o Guid pedido -
     /// simples o suficiente para nao precisar de mocking framework.
-    private sealed class FakeMembershipChecker(bool isMember = true) : IHouseholdMembershipChecker
+    private sealed class FakeMembershipChecker(bool isMember = true, IReadOnlyList<HouseholdSummary>? households = null) : IHouseholdMembershipChecker
     {
         public Task<bool> IsMemberAsync(Guid userId, Guid householdId, CancellationToken ct = default) =>
             Task.FromResult(isMember);
+
+        public Task<IReadOnlyList<HouseholdSummary>> GetMyHouseholdsAsync(Guid userId, CancellationToken ct = default) =>
+            Task.FromResult(households ?? []);
     }
 
     private static Vehicle NewVehicle(Guid householdId, string brand = "Toyota", string model = "Corolla") => new()
@@ -51,6 +54,24 @@ public class AutoMcpToolsTests
         Vin = Guid.NewGuid().ToString("N"),
         Registered = new DateOnly(2020, 1, 1),
     };
+
+    [Fact]
+    public async Task ListHouseholds_DevolveOsHouseholdsDoUtilizadorAutenticado()
+    {
+        var households = new List<HouseholdSummary> { new(Guid.NewGuid(), "A minha casa", true) };
+
+        var result = await AutoMcpTools.ListHouseholds(
+            new FakeMembershipChecker(households: households), NewHttpContextAccessor(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Same(households, result);
+    }
+
+    [Fact]
+    public async Task ListHouseholds_SemUtilizadorAutenticado_LancaMcpException()
+    {
+        await Assert.ThrowsAsync<McpException>(() => AutoMcpTools.ListHouseholds(
+            new FakeMembershipChecker(), NewHttpContextAccessor(), CancellationToken.None));
+    }
 
     [Fact]
     public async Task ListVehicles_UtilizadorMembro_DevolveVeiculosDoHousehold()

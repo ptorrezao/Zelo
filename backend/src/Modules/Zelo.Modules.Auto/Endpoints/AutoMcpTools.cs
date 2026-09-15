@@ -29,7 +29,9 @@ namespace Zelo.Modules.Auto.Endpoints;
 /// por id confirmam tambem que o recurso pertence a esse household -
 /// RequireHouseholdMembership so cobre isto nos endpoints REST que recebem
 /// householdId; aqui, por ser superficie nova, fecha-se o gap em vez de o
-/// repetir.
+/// repetir. ListHouseholds existe para o agente conseguir descobrir esse
+/// householdId por si so, sem o utilizador ter de o copiar a mao do
+/// browser - sem isto nenhuma outra tool era utilizavel.
 /// Nao e "static" apesar de so ter metodos estaticos - WithTools&lt;T&gt;()
 /// usa T como argumento de tipo generico, e o C# nao permite tipos static
 /// nessa posicao.
@@ -50,15 +52,20 @@ internal sealed class AutoMcpTools
         return options;
     }
 
-    private static async Task EnsureMemberAsync(
-        Guid householdId, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+    private static Guid RequireUserId(IHttpContextAccessor httpContextAccessor)
     {
         var user = httpContextAccessor.HttpContext?.User
             ?? throw new McpException("Sem contexto de utilizador autenticado.");
 
-        if (!Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
-            throw new McpException("Sem contexto de utilizador autenticado.");
+        return Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+            ? userId
+            : throw new McpException("Sem contexto de utilizador autenticado.");
+    }
 
+    private static async Task EnsureMemberAsync(
+        Guid householdId, IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct)
+    {
+        var userId = RequireUserId(httpContextAccessor);
         if (!await membership.IsMemberAsync(userId, householdId, ct))
             throw new McpException("Sem acesso a este household.");
     }
@@ -97,6 +104,14 @@ internal sealed class AutoMcpTools
 
         return vehicleId;
     }
+
+    // ---- Households ----
+
+    [McpServerTool(Name = "list_households", ReadOnly = true)]
+    [Description("Lista os households do utilizador autenticado, com o respetivo householdId - chama isto primeiro se não souberes o householdId a usar nas outras tools.")]
+    public static Task<IReadOnlyList<HouseholdSummary>> ListHouseholds(
+        IHouseholdMembershipChecker membership, IHttpContextAccessor httpContextAccessor, CancellationToken ct) =>
+        membership.GetMyHouseholdsAsync(RequireUserId(httpContextAccessor), ct);
 
     // ---- Veículos ----
 

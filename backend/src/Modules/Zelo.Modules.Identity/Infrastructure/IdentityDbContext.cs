@@ -10,6 +10,7 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
 {
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

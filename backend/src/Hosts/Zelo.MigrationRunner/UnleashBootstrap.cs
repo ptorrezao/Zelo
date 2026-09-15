@@ -15,6 +15,7 @@ internal static class UnleashBootstrap
     public static readonly (string Name, string Description)[] RequiredFlags =
     [
         ("auto-app-enabled", "Mostra a app Auto na navegacao"),
+        ("auto-mcp-enabled", "Ativa o servidor MCP do Auto (tools para agentes LLM) em /mcp/auto"),
         ("inventory-app-enabled", "Mostra a app Inventario na navegacao"),
     ];
 

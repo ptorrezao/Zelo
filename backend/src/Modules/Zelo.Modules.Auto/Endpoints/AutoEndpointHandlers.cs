@@ -32,10 +32,11 @@ internal static class AutoEndpointHandlers
         return Results.Created($"/api/auto/vehicles/{vehicle.Id}", VehicleResponse.From(vehicle));
     }
 
-    /// Construcao/persistencia partilhada entre CreateVehicle e ConfirmImport
-    /// - as duas precisam exatamente da mesma logica (entidade + sync de
-    /// inspecao + eventos), a segunda so difere em nao devolver um IResult.
-    private static async Task<Vehicle> CreateVehicleEntityAsync(
+    /// Construcao/persistencia partilhada entre CreateVehicle, ConfirmImport
+    /// e AutoMcpTools.CreateVehicle - todas precisam exatamente da mesma
+    /// logica (entidade + sync de inspecao + eventos), so a primeira devolve
+    /// um IResult.
+    internal static async Task<Vehicle> CreateVehicleEntityAsync(
         Guid householdId, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
     {
         var vehicle = new Vehicle
@@ -80,9 +81,18 @@ internal static class AutoEndpointHandlers
     public static async Task<IResult> UpdateVehicle(
         Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
     {
+        var vehicle = await UpdateVehicleEntityAsync(id, request, db, events, ct);
+        return vehicle is null ? Results.NotFound() : Results.Ok(VehicleResponse.From(vehicle));
+    }
+
+    /// Partilhada com AutoMcpTools.UpdateVehicle - devolve null (em vez de
+    /// IResult) para quem chama nao depender de tipos de Minimal API.
+    internal static async Task<Vehicle?> UpdateVehicleEntityAsync(
+        Guid id, VehicleUpsertRequest request, AutoDbContext db, IEventPublisher events, CancellationToken ct)
+    {
         var vehicle = await db.Vehicles.FindAsync([id], ct);
         if (vehicle is null)
-            return Results.NotFound();
+            return null;
 
         vehicle.Category = request.Category;
         vehicle.Brand = request.Brand;
@@ -107,21 +117,30 @@ internal static class AutoEndpointHandlers
         if (obligationEvent is not null)
             await PublishObligationEventAsync(events, obligationEvent, ct);
 
-        return Results.Ok(VehicleResponse.From(vehicle));
+        return vehicle;
     }
 
     public static async Task<IResult> DeleteVehicle(
         Guid id, VehicleStatus status, AutoDbContext db, IEventPublisher events, CancellationToken ct)
     {
+        var vehicle = await ArchiveVehicleEntityAsync(id, status, db, events, ct);
+        return vehicle is null ? Results.NotFound() : Results.NoContent();
+    }
+
+    /// Partilhada com AutoMcpTools.DeleteVehicle - "delete" e sempre uma
+    /// mudanca de estado (Vendido/Abatido), nunca um DELETE fisico.
+    internal static async Task<Vehicle?> ArchiveVehicleEntityAsync(
+        Guid id, VehicleStatus status, AutoDbContext db, IEventPublisher events, CancellationToken ct)
+    {
         var vehicle = await db.Vehicles.FindAsync([id], ct);
         if (vehicle is null)
-            return Results.NotFound();
+            return null;
 
         vehicle.Status = status;
         await db.SaveChangesAsync(ct);
         await events.PublishAsync(VehicleEvents.Archived(vehicle), ct);
 
-        return Results.NoContent();
+        return vehicle;
     }
 
     public static async Task<IResult> PreviewImport(
@@ -229,8 +248,18 @@ internal static class AutoEndpointHandlers
     public static async Task<IResult> CreateMaintenance(
         Guid vehicleId, MaintenanceUpsertRequest request, AutoDbContext db, CancellationToken ct)
     {
+        var maintenance = await CreateMaintenanceEntityAsync(vehicleId, request, db, ct);
+        return maintenance is null
+            ? Results.NotFound()
+            : Results.Created($"/api/auto/maintenances/{maintenance.Id}", MaintenanceResponse.From(maintenance));
+    }
+
+    /// Partilhada com AutoMcpTools.CreateMaintenance.
+    internal static async Task<Maintenance?> CreateMaintenanceEntityAsync(
+        Guid vehicleId, MaintenanceUpsertRequest request, AutoDbContext db, CancellationToken ct)
+    {
         if (!await db.Vehicles.AnyAsync(v => v.Id == vehicleId, ct))
-            return Results.NotFound();
+            return null;
 
         var maintenance = new Maintenance
         {
@@ -261,7 +290,7 @@ internal static class AutoEndpointHandlers
         db.Maintenances.Add(maintenance);
         await db.SaveChangesAsync(ct);
 
-        return Results.Created($"/api/auto/maintenances/{maintenance.Id}", MaintenanceResponse.From(maintenance));
+        return maintenance;
     }
 
     public static async Task<IResult> GetMaintenance(Guid id, AutoDbContext db, CancellationToken ct) =>
@@ -272,9 +301,17 @@ internal static class AutoEndpointHandlers
     public static async Task<IResult> UpdateMaintenance(
         Guid id, MaintenanceUpsertRequest request, AutoDbContext db, CancellationToken ct)
     {
+        var maintenance = await UpdateMaintenanceEntityAsync(id, request, db, ct);
+        return maintenance is null ? Results.NotFound() : Results.Ok(MaintenanceResponse.From(maintenance));
+    }
+
+    /// Partilhada com AutoMcpTools.UpdateMaintenance.
+    internal static async Task<Maintenance?> UpdateMaintenanceEntityAsync(
+        Guid id, MaintenanceUpsertRequest request, AutoDbContext db, CancellationToken ct)
+    {
         var maintenance = await db.Maintenances.Include(m => m.Items).FirstOrDefaultAsync(m => m.Id == id, ct);
         if (maintenance is null)
-            return Results.NotFound();
+            return null;
 
         maintenance.Date = request.Date;
         maintenance.Odometer = request.Odometer;
@@ -286,32 +323,50 @@ internal static class AutoEndpointHandlers
         maintenance.InvoiceDate = request.InvoiceDate;
 
         await db.SaveChangesAsync(ct);
-        return Results.Ok(MaintenanceResponse.From(maintenance));
+        return maintenance;
     }
 
-    public static async Task<IResult> DeleteMaintenance(Guid id, AutoDbContext db, CancellationToken ct)
+    public static async Task<IResult> DeleteMaintenance(Guid id, AutoDbContext db, CancellationToken ct) =>
+        await DeleteMaintenanceEntityAsync(id, db, ct) ? Results.NoContent() : Results.NotFound();
+
+    /// Partilhada com AutoMcpTools.DeleteMaintenance.
+    internal static async Task<bool> DeleteMaintenanceEntityAsync(Guid id, AutoDbContext db, CancellationToken ct)
     {
         var maintenance = await db.Maintenances.FindAsync([id], ct);
         if (maintenance is null)
-            return Results.NotFound();
+            return false;
 
         db.Maintenances.Remove(maintenance);
         await db.SaveChangesAsync(ct);
-        return Results.NoContent();
+        return true;
     }
 
-    public static IResult CreateUploadUrl(Guid vehicleId, UploadUrlRequest request, IObjectStorage storage)
+    public static IResult CreateUploadUrl(Guid vehicleId, UploadUrlRequest request, IObjectStorage storage) =>
+        Results.Ok(CreateUploadUrlResponse(vehicleId, request, storage));
+
+    /// Partilhada com AutoMcpTools.CreateDocumentUploadUrl.
+    internal static UploadUrlResponse CreateUploadUrlResponse(Guid vehicleId, UploadUrlRequest request, IObjectStorage storage)
     {
         var objectKey = $"vehicles/{vehicleId}/{Guid.NewGuid()}-{request.FileName}";
         var (uploadUrl, expiresAt) = storage.CreateUploadUrl(objectKey, request.ContentType);
-        return Results.Ok(new UploadUrlResponse(objectKey, uploadUrl, expiresAt));
+        return new UploadUrlResponse(objectKey, uploadUrl, expiresAt);
     }
 
     public static async Task<IResult> CreateDocument(
         Guid vehicleId, DocumentCreateRequest request, AutoDbContext db, CancellationToken ct)
     {
+        var document = await CreateDocumentEntityAsync(vehicleId, request, db, ct);
+        return document is null
+            ? Results.NotFound()
+            : Results.Created($"/api/auto/documents/{document.Id}", DocumentResponse.From(document));
+    }
+
+    /// Partilhada com AutoMcpTools.CreateDocument.
+    internal static async Task<VehicleDocument?> CreateDocumentEntityAsync(
+        Guid vehicleId, DocumentCreateRequest request, AutoDbContext db, CancellationToken ct)
+    {
         if (!await db.Vehicles.AnyAsync(v => v.Id == vehicleId, ct))
-            return Results.NotFound();
+            return null;
 
         var document = new VehicleDocument
         {
@@ -329,7 +384,7 @@ internal static class AutoEndpointHandlers
         db.Documents.Add(document);
         await db.SaveChangesAsync(ct);
 
-        return Results.Created($"/api/auto/documents/{document.Id}", DocumentResponse.From(document));
+        return document;
     }
 
     public static async Task<List<DocumentResponse>> GetDocuments(
@@ -345,18 +400,26 @@ internal static class AutoEndpointHandlers
             .ToListAsync(ct);
     }
 
-    public static async Task<IResult> DeleteDocument(Guid id, AutoDbContext db, CancellationToken ct)
+    public static async Task<IResult> DeleteDocument(Guid id, AutoDbContext db, CancellationToken ct) =>
+        await DeleteDocumentEntityAsync(id, db, ct) ? Results.NoContent() : Results.NotFound();
+
+    /// Partilhada com AutoMcpTools.DeleteDocument.
+    internal static async Task<bool> DeleteDocumentEntityAsync(Guid id, AutoDbContext db, CancellationToken ct)
     {
         var document = await db.Documents.FindAsync([id], ct);
         if (document is null)
-            return Results.NotFound();
+            return false;
 
         db.Documents.Remove(document);
         await db.SaveChangesAsync(ct);
-        return Results.NoContent();
+        return true;
     }
 
-    public static async Task<IResult> GetStats(Guid vehicleId, AutoDbContext db, CancellationToken ct)
+    public static async Task<IResult> GetStats(Guid vehicleId, AutoDbContext db, CancellationToken ct) =>
+        Results.Ok(await GetStatsAsync(vehicleId, db, ct));
+
+    /// Partilhada com AutoMcpTools.GetVehicleStats.
+    internal static async Task<VehicleStatsResponse> GetStatsAsync(Guid vehicleId, AutoDbContext db, CancellationToken ct)
     {
         var since = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-1));
 
@@ -367,10 +430,10 @@ internal static class AutoEndpointHandlers
         var vehicle = await db.Vehicles.FindAsync([vehicleId], ct);
         var kmsLastMonth = recent.Count > 0 ? Math.Max(0, (vehicle?.Odometer ?? 0) - recent.Min(m => m.Odometer)) : 0;
 
-        return Results.Ok(new VehicleStatsResponse(
+        return new VehicleStatsResponse(
             kmsLastMonth,
             recent.Sum(m => m.Cost),
-            recent.Count));
+            recent.Count);
     }
 
     /// VehicleEvents.SyncInspectionObligation devolve IIntegrationEvent
